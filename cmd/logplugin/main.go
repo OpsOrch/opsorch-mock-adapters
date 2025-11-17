@@ -1,0 +1,45 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"sync"
+
+	"github.com/opsorch/opsorch-core/log"
+	"github.com/opsorch/opsorch-core/schema"
+	"github.com/opsorch/opsorch-mock-adapters/internal/pluginrpc"
+	"github.com/opsorch/opsorch-mock-adapters/logmock"
+)
+
+func main() {
+	var (
+		prov     log.Provider
+		provOnce sync.Once
+		provErr  error
+	)
+
+	pluginrpc.Run(func(req pluginrpc.Request) (any, error) {
+		provOnce.Do(func() {
+			prov, provErr = logmock.New(req.Config)
+		})
+		if provErr != nil {
+			return nil, provErr
+		}
+
+		switch req.Method {
+		case "log.query":
+			var q schema.LogQuery
+			if err := json.Unmarshal(req.Payload, &q); err != nil {
+				return nil, err
+			}
+			return prov.Query(context.Background(), q)
+		default:
+			return nil, errUnknownMethod(req.Method)
+		}
+	})
+}
+
+func errUnknownMethod(method string) error {
+	return fmt.Errorf("unknown method %s", method)
+}
