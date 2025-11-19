@@ -76,6 +76,8 @@ func (p *Provider) Query(ctx context.Context, query schema.MetricQuery) ([]schem
 	comparison.Name = series.Name + ".baseline"
 	comparison.Labels = mockutil.CloneMap(series.Labels)
 	comparison.Labels["variant"] = "baseline"
+	comparison.Points = make([]schema.MetricPoint, len(series.Points))
+	copy(comparison.Points, series.Points)
 	for i := range comparison.Points {
 		comparison.Points[i].Value = comparison.Points[i].Value * 0.92
 	}

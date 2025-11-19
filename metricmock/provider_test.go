@@ -82,3 +82,25 @@ func TestQueryRespectsScope(t *testing.T) {
 		t.Fatalf("expected scope metadata %+v, got %+v", scope, series[0].Metadata["scope"])
 	}
 }
+
+func TestQueryKeepsPrimarySeriesValuesIntact(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("New returned error: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	series, err := prov.Query(context.Background(), schema.MetricQuery{Expression: "latency_p99"})
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if len(series) < 2 {
+		t.Fatalf("expected comparative series, got %d", len(series))
+	}
+	if len(series[0].Points) == 0 || len(series[1].Points) == 0 {
+		t.Fatalf("expected both series to contain points")
+	}
+	if series[0].Points[0].Value == series[1].Points[0].Value {
+		t.Fatalf("baseline modification should not change primary series values")
+	}
+}
