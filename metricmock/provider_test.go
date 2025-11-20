@@ -17,7 +17,7 @@ func TestQueryBuildsSeries(t *testing.T) {
 
 	end := time.Now().UTC()
 	start := end.Add(-10 * time.Minute)
-	series, err := prov.Query(context.Background(), schema.MetricQuery{Expression: "latency_p99{service=\"checkout\"}", Start: start, End: end, Step: time.Minute})
+	series, err := prov.Query(context.Background(), schema.MetricQuery{Expression: "latency_p99{service=\"checkout\"}", Start: start, End: end, Step: 60})
 	if err != nil {
 		t.Fatalf("Query returned error: %v", err)
 	}

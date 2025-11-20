@@ -49,9 +49,11 @@ func (p *Provider) Query(ctx context.Context, query schema.MetricQuery) ([]schem
 	if start.After(end) {
 		start, end = end, start
 	}
-	step := query.Step
-	if step <= 0 {
-		step = 30 * time.Second
+	step := time.Duration(query.Step) * time.Second
+	if step == 0 {
+		// Default to 60s step when not provided to avoid zero-division and
+		// produce a reasonable sampling interval for generated series.
+		step = 60 * time.Second
 	}
 
 	points := generatePoints(start, end, step, query.Expression)
