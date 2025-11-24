@@ -17,7 +17,7 @@ func TestQueryBuildsSeries(t *testing.T) {
 
 	end := time.Now().UTC()
 	start := end.Add(-10 * time.Minute)
-	series, err := prov.Query(context.Background(), schema.MetricQuery{Expression: "latency_p99{service=\"checkout\"}", Start: start, End: end, Step: 60})
+	series, err := prov.Query(context.Background(), schema.MetricQuery{Expression: &schema.MetricExpression{MetricName: "latency_p99{service=\"checkout\"}"}, Start: start, End: end, Step: 60})
 	if err != nil {
 		t.Fatalf("Query returned error: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestQueryKeepsPrimarySeriesValuesIntact(t *testing.T) {
 	}
 	prov := provAny.(*Provider)
 
-	series, err := prov.Query(context.Background(), schema.MetricQuery{Expression: "latency_p99"})
+	series, err := prov.Query(context.Background(), schema.MetricQuery{Expression: &schema.MetricExpression{MetricName: "latency_p99"}})
 	if err != nil {
 		t.Fatalf("Query returned error: %v", err)
 	}

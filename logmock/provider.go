@@ -50,8 +50,32 @@ func (p *Provider) Query(ctx context.Context, query schema.LogQuery) ([]schema.L
 	if limit <= 0 {
 		limit = p.cfg.DefaultLimit
 	}
+
+	search := ""
+	var severityFilter []string
+	if query.Expression != nil {
+		search = query.Expression.Search
+		severityFilter = query.Expression.SeverityIn
+	}
+
 	service := inferService(query)
-	severity := inferSeverity(query.Query)
+
+	// Determine which severities to generate
+	severities := []string{"info", "warn", "error"}
+	if len(severityFilter) > 0 {
+		// Normalize the filter values to lowercase
+		normalized := make([]string, 0, len(severityFilter))
+		for _, s := range severityFilter {
+			normalized = append(normalized, strings.ToLower(s))
+		}
+		severities = normalized
+	} else {
+		// Try to infer from search query
+		inferred := inferSeverity(search)
+		if inferred != "info" {
+			severities = []string{inferred}
+		}
+	}
 
 	count := limit
 	if count > 20 {
@@ -70,13 +94,15 @@ func (p *Provider) Query(ctx context.Context, query schema.LogQuery) ([]schema.L
 		ts := start.Add(time.Duration(i+1) * step)
 		labels := scopedLabels(query, service)
 		method, path := requestShape(service, i)
+		// Cycle through the allowed severities
+		severity := severities[i%len(severities)]
 		status := responseStatus(severity, i)
 		latency := baseLatency(severity, i)
 		traceID := fmt.Sprintf("trace-%05d", 4200+i)
 		user := []string{"alice", "sam", "casey", "fern"}[i%4]
 		entries = append(entries, schema.LogEntry{
 			Timestamp: ts,
-			Message:   fmt.Sprintf("%s %s %d in %dms | user=%s trace=%s | %s", method, path, status, latency, user, traceID, fallback(query.Query, "service logs")),
+			Message:   fmt.Sprintf("%s %s %d in %dms | user=%s trace=%s | %s", method, path, status, latency, user, traceID, fallback(search, "service logs")),
 			Severity:  severity,
 			Service:   service,
 			Labels:    labels,
@@ -120,7 +146,13 @@ func inferService(q schema.LogQuery) string {
 	if v, ok := q.Metadata["service"].(string); ok && v != "" {
 		return v
 	}
-	lower := strings.ToLower(q.Query)
+
+	search := ""
+	if q.Expression != nil {
+		search = q.Expression.Search
+	}
+
+	lower := strings.ToLower(search)
 	samples := []string{"checkout", "search", "web"}
 	for _, s := range samples {
 		if strings.Contains(lower, s) {
@@ -207,9 +239,14 @@ func fallbackEnv(q schema.LogQuery) string {
 }
 
 func scopedMetadata(source string, q schema.LogQuery) map[string]any {
+	search := ""
+	if q.Expression != nil {
+		search = q.Expression.Search
+	}
+
 	metadata := map[string]any{
 		"source":  source,
-		"matched": strings.TrimSpace(q.Query),
+		"matched": strings.TrimSpace(search),
 	}
 	if q.Scope != (schema.QueryScope{}) {
 		metadata["scope"] = q.Scope

@@ -17,7 +17,7 @@ func TestQueryGeneratesEntries(t *testing.T) {
 
 	end := time.Now().UTC()
 	start := end.Add(-30 * time.Minute)
-	entries, err := prov.Query(context.Background(), schema.LogQuery{Query: "checkout error", Start: start, End: end, Limit: 4})
+	entries, err := prov.Query(context.Background(), schema.LogQuery{Expression: &schema.LogExpression{Search: "checkout error"}, Start: start, End: end, Limit: 4})
 	if err != nil {
 		t.Fatalf("Query returned error: %v", err)
 	}

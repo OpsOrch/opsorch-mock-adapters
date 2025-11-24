@@ -34,6 +34,12 @@ func main() {
 				return nil, err
 			}
 			return prov.Query(context.Background(), q)
+		case "metric.describe":
+			var scope schema.QueryScope
+			if err := json.Unmarshal(req.Payload, &scope); err != nil {
+				return nil, err
+			}
+			return prov.Describe(context.Background(), scope)
 		default:
 			return nil, errUnknownMethod(req.Method)
 		}

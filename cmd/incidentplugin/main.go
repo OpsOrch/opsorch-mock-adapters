@@ -35,7 +35,7 @@ func main() {
 			}
 			return prov.Query(context.Background(), q)
 		case "incident.list":
-			return prov.List(context.Background())
+			return prov.Query(context.Background(), schema.IncidentQuery{})
 		case "incident.get":
 			var payload struct {
 				ID string `json:"id"`
