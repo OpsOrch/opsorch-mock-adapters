@@ -1,9 +1,9 @@
-.DEFAULT_GOAL := docker-demo
+.DEFAULT_GOAL := docker
 
-.PHONY: fmt test plugin docker-demo
+.PHONY: fmt test plugin docker
 
 PLUGINS ?= incidentplugin logplugin metricplugin ticketplugin messagingplugin serviceplugin secretplugin
-BASE_IMAGE ?= opsorch-core-base:latest
+BASE_IMAGE ?= ghcr.io/opsorch/opsorch-core:latest
 
 fmt:
 	gofmt -w $(shell find . -name '*.go' -type f)
@@ -19,5 +19,5 @@ plugin:
 		go build -o bin/$${p} ./cmd/$${p}; \
 	done
 
-docker-demo:
-	docker build -f Dockerfile -t opsorch-mock-demo:latest --build-arg BASE_IMAGE=$(BASE_IMAGE) ..
+docker:
+	docker build -f Dockerfile -t opsorch-mock-adapters:latest --build-arg BASE_IMAGE=$(BASE_IMAGE) .

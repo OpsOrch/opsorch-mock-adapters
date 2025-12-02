@@ -62,26 +62,41 @@ Run the test suite:
 go test ./...
 ```
 
-## Demo Docker image
+## Docker Image
 
-Build a demo-ready image that layers the mock plugins onto `opsorch-core-base:latest` (make sure that base image is available locally via `docker pull` or `make docker-build-base` from the `opsorch-core` repo). The build context must include both this repo and `opsorch-core` as siblings (run from the parent directory):
-
-```bash
-docker build -f opsorch-mock-adapters/Dockerfile -t opsorch-mock-demo:latest ..
-```
-
-Or use the helper target from this repo:
+Build a Docker image that layers the mock plugins onto the OpsOrch core base image:
 
 ```bash
-make docker-demo
+make docker
 ```
 
-Run the demo image (defaults wire every capability to the bundled mock plugin binaries):
+This builds `opsorch-mock-adapters:latest` using the base image `ghcr.io/opsorch/opsorch-core:latest` by default. You can override the base image:
 
 ```bash
-docker run --rm -p 8080:8080 opsorch-mock-demo:latest
+make docker BASE_IMAGE=ghcr.io/opsorch/opsorch-core:v1.0.0
 ```
 
-Override any capability by setting the corresponding `OPSORCH_<CAP>_PLUGIN` env to a different plugin path at runtime.
+Or build directly with Docker:
 
-The module pulls `opsorch-core` from `../opsorch-core` via a local replace for development convenience.
+```bash
+docker build -f Dockerfile -t opsorch-mock-adapters:latest --build-arg BASE_IMAGE=ghcr.io/opsorch/opsorch-core:latest .
+```
+
+Run the image (all capabilities are wired to the bundled mock plugin binaries):
+
+```bash
+docker run --rm -p 8080:8080 opsorch-mock-adapters:latest
+```
+
+Override any capability by setting the corresponding `OPSORCH_<CAP>_PLUGIN` environment variable at runtime.
+
+## CI/CD
+
+The repository includes GitHub Actions workflows for:
+
+- **CI** (`ci.yml`): Runs tests and linting on every push/PR to main
+- **Release** (`release.yml`): Manual workflow that:
+  - Runs tests and linting
+  - Creates a new version tag (patch/minor/major)
+  - Builds and publishes multi-arch Docker images to GHCR
+  - Creates a GitHub release with changelog

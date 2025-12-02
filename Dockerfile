@@ -5,7 +5,7 @@
 # opsorch-mock-adapters (e.g. run from repo root with -f opsorch-mock-adapters/Dockerfile . or ..).
 
 ARG GO_VERSION=1.22
-ARG BASE_IMAGE=opsorch-core-base:latest
+ARG BASE_IMAGE=ghcr.io/opsorch/opsorch-core:latest
 ARG PLUGINS=""
 
 FROM golang:${GO_VERSION} AS plugin-builder
@@ -15,9 +15,8 @@ ARG PLUGINS
 SHELL ["/bin/bash", "-c"]
 WORKDIR /src
 
-# Expect both repos in the build context (sibling directories under the context root).
-COPY opsorch-core /src/opsorch-core
-COPY opsorch-mock-adapters /src/opsorch-mock-adapters
+# Build context is now the repository root
+COPY . /src/opsorch-mock-adapters
 
 ENV CGO_ENABLED=0
 
