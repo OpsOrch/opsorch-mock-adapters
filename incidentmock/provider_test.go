@@ -28,6 +28,9 @@ func TestListAndGetSeededIncidents(t *testing.T) {
 	if list[0].Metadata["source"] != "demo" {
 		t.Fatalf("expected metadata source to match config, got %v", list[0].Metadata["source"])
 	}
+	if list[0].Description == "" {
+		t.Fatalf("expected description to be set on seeded incidents")
+	}
 
 	got, err := prov.Get(context.Background(), "inc-001")
 	if err != nil {
@@ -35,6 +38,9 @@ func TestListAndGetSeededIncidents(t *testing.T) {
 	}
 	if got.ID != "inc-001" {
 		t.Fatalf("unexpected incident fetched: %+v", got)
+	}
+	if got.Description == "" {
+		t.Fatalf("expected seeded incident to have description: %+v", got)
 	}
 	if _, err := prov.Get(context.Background(), "missing"); err == nil {
 		t.Fatalf("expected error for missing incident")
@@ -48,7 +54,7 @@ func TestCreateUpdateAndTimeline(t *testing.T) {
 	}
 	prov := provAny.(*Provider)
 
-	input := schema.CreateIncidentInput{Title: "New", Status: "open", Service: "svc-web", Fields: map[string]any{"environment": "prod"}}
+	input := schema.CreateIncidentInput{Title: "New", Description: "New incident impacting web", Status: "open", Service: "svc-web", Fields: map[string]any{"environment": "prod"}}
 	created, err := prov.Create(context.Background(), input)
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
@@ -65,12 +71,16 @@ func TestCreateUpdateAndTimeline(t *testing.T) {
 	if created.Metadata["source"] != "mock" {
 		t.Fatalf("expected default source metadata, got %+v", created.Metadata)
 	}
+	if created.Description != input.Description {
+		t.Fatalf("expected description to be copied, got %+v", created)
+	}
 
 	now := time.Now().UTC()
 	updateTitle := "Updated"
 	updateSeverity := "sev1"
 	updateService := "svc-api"
-	updated, err := prov.Update(context.Background(), created.ID, schema.UpdateIncidentInput{Title: &updateTitle, Severity: &updateSeverity, Service: &updateService})
+	updateDescription := "Updated incident details"
+	updated, err := prov.Update(context.Background(), created.ID, schema.UpdateIncidentInput{Title: &updateTitle, Description: &updateDescription, Severity: &updateSeverity, Service: &updateService})
 	if err != nil {
 		t.Fatalf("Update returned error: %v", err)
 	}
@@ -79,6 +89,9 @@ func TestCreateUpdateAndTimeline(t *testing.T) {
 	}
 	if updated.Service != updateService {
 		t.Fatalf("expected service updated to %s, got %s", updateService, updated.Service)
+	}
+	if updated.Description != updateDescription {
+		t.Fatalf("expected description updated, got %+v", updated)
 	}
 	if !updated.UpdatedAt.After(now.Add(-1 * time.Second)) {
 		t.Fatalf("UpdatedAt should be bumped")
@@ -180,5 +193,19 @@ func TestQueryFiltersStatusAndSearch(t *testing.T) {
 	}
 	if len(results) != 1 {
 		t.Fatalf("expected limit to apply to search results, got %+v", results)
+	}
+	results, err = prov.Query(context.Background(), schema.IncidentQuery{Query: "timeouts"})
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	found = false
+	for _, inc := range results {
+		if inc.ID == "inc-001" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected description search to find inc-001, got %+v", results)
 	}
 }

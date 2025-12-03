@@ -112,15 +112,16 @@ func (p *Provider) Create(ctx context.Context, in schema.CreateIncidentInput) (s
 	now := time.Now().UTC()
 
 	incident := schema.Incident{
-		ID:        id,
-		Title:     in.Title,
-		Status:    emptyFallback(in.Status, "open"),
-		Severity:  emptyFallback(in.Severity, p.cfg.DefaultSeverity),
-		Service:   inferService(in),
-		CreatedAt: now,
-		UpdatedAt: now,
-		Fields:    mockutil.CloneMap(in.Fields),
-		Metadata:  mockutil.CloneMap(in.Metadata),
+		ID:          id,
+		Title:       in.Title,
+		Description: in.Description,
+		Status:      emptyFallback(in.Status, "open"),
+		Severity:    emptyFallback(in.Severity, p.cfg.DefaultSeverity),
+		Service:     inferService(in),
+		CreatedAt:   now,
+		UpdatedAt:   now,
+		Fields:      mockutil.CloneMap(in.Fields),
+		Metadata:    mockutil.CloneMap(in.Metadata),
 	}
 	if incident.Metadata == nil {
 		incident.Metadata = map[string]any{}
@@ -149,6 +150,9 @@ func (p *Provider) Update(ctx context.Context, id string, in schema.UpdateIncide
 
 	if in.Title != nil {
 		inc.Title = *in.Title
+	}
+	if in.Description != nil {
+		inc.Description = *in.Description
 	}
 	if in.Status != nil {
 		inc.Status = *in.Status
@@ -220,13 +224,14 @@ func (p *Provider) seed() {
 
 	seed := []schema.Incident{
 		{
-			ID:        "inc-001",
-			Title:     "Checkout latency impacting EU customers",
-			Status:    "mitigating",
-			Severity:  p.cfg.DefaultSeverity,
-			Service:   "svc-checkout",
-			CreatedAt: now.Add(-55 * time.Minute),
-			UpdatedAt: now.Add(-10 * time.Minute),
+			ID:          "inc-001",
+			Title:       "Checkout latency impacting EU customers",
+			Description: "High checkout latency causing timeouts for a slice of EU traffic",
+			Status:      "mitigating",
+			Severity:    p.cfg.DefaultSeverity,
+			Service:     "svc-checkout",
+			CreatedAt:   now.Add(-55 * time.Minute),
+			UpdatedAt:   now.Add(-10 * time.Minute),
 			Fields: map[string]any{
 				"service":        "svc-checkout",
 				"team":           "team-velocity",
@@ -237,13 +242,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "channel": "#inc-123", "runbook": "https://runbook.demo/checkout-latency"},
 		},
 		{
-			ID:        "inc-002",
-			Title:     "Search results intermittently empty",
-			Status:    "monitoring",
-			Severity:  "sev3",
-			Service:   "svc-search",
-			CreatedAt: now.Add(-2 * time.Hour),
-			UpdatedAt: now.Add(-30 * time.Minute),
+			ID:          "inc-002",
+			Title:       "Search results intermittently empty",
+			Description: "Search API intermittently returns empty result sets",
+			Status:      "monitoring",
+			Severity:    "sev3",
+			Service:     "svc-search",
+			CreatedAt:   now.Add(-2 * time.Hour),
+			UpdatedAt:   now.Add(-30 * time.Minute),
 			Fields: map[string]any{
 				"service":       "svc-search",
 				"team":          "team-aurora",
@@ -253,13 +259,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "linkedDashboard": "dash-search"},
 		},
 		{
-			ID:        "inc-003",
-			Title:     "Payments webhook timeouts from Stripe",
-			Status:    "open",
-			Severity:  "sev1",
-			Service:   "svc-payments",
-			CreatedAt: now.Add(-3*time.Hour - 45*time.Minute),
-			UpdatedAt: now.Add(-15 * time.Minute),
+			ID:          "inc-003",
+			Title:       "Payments webhook timeouts from Stripe",
+			Description: "Stripe webhook requests timing out from payments provider",
+			Status:      "open",
+			Severity:    "sev1",
+			Service:     "svc-payments",
+			CreatedAt:   now.Add(-3*time.Hour - 45*time.Minute),
+			UpdatedAt:   now.Add(-15 * time.Minute),
 			Fields: map[string]any{
 				"service":     "svc-payments",
 				"team":        "team-revenue",
@@ -270,13 +277,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "runbook": "https://runbook.demo/payments-webhooks", "alertId": "pagerduty:PAY-99"},
 		},
 		{
-			ID:        "inc-004",
-			Title:     "Notification fanout lagging for promos",
-			Status:    "investigating",
-			Severity:  "sev2",
-			Service:   "svc-notifications",
-			CreatedAt: now.Add(-95 * time.Minute),
-			UpdatedAt: now.Add(-35 * time.Minute),
+			ID:          "inc-004",
+			Title:       "Notification fanout lagging for promos",
+			Description: "Notification fanout workers are lagging promo campaigns",
+			Status:      "investigating",
+			Severity:    "sev2",
+			Service:     "svc-notifications",
+			CreatedAt:   now.Add(-95 * time.Minute),
+			UpdatedAt:   now.Add(-35 * time.Minute),
 			Fields: map[string]any{
 				"service":     "svc-notifications",
 				"team":        "team-signal",
@@ -286,13 +294,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "channel": "#notify-incident", "linkedDashboard": "dash-notifications"},
 		},
 		{
-			ID:        "inc-005",
-			Title:     "Auth latency spikes for mobile logins",
-			Status:    "mitigating",
-			Severity:  "sev2",
-			Service:   "svc-identity",
-			CreatedAt: now.Add(-4*time.Hour - 10*time.Minute),
-			UpdatedAt: now.Add(-50 * time.Minute),
+			ID:          "inc-005",
+			Title:       "Auth latency spikes for mobile logins",
+			Description: "Mobile login auth latency spiking for the identity service",
+			Status:      "mitigating",
+			Severity:    "sev2",
+			Service:     "svc-identity",
+			CreatedAt:   now.Add(-4*time.Hour - 10*time.Minute),
+			UpdatedAt:   now.Add(-50 * time.Minute),
 			Fields: map[string]any{
 				"service":     "svc-identity",
 				"team":        "team-guardian",
@@ -302,13 +311,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "runbook": "https://runbook.demo/auth-latency", "linkedDashboard": "dash-auth"},
 		},
 		{
-			ID:        "inc-006",
-			Title:     "Warehouse batch stuck on partition 7",
-			Status:    "identified",
-			Severity:  "sev3",
-			Service:   "svc-warehouse",
-			CreatedAt: now.Add(-7*time.Hour - 20*time.Minute),
-			UpdatedAt: now.Add(-5 * time.Hour),
+			ID:          "inc-006",
+			Title:       "Warehouse batch stuck on partition 7",
+			Description: "Warehouse batch job stuck processing partition 7",
+			Status:      "identified",
+			Severity:    "sev3",
+			Service:     "svc-warehouse",
+			CreatedAt:   now.Add(-7*time.Hour - 20*time.Minute),
+			UpdatedAt:   now.Add(-5 * time.Hour),
 			Fields: map[string]any{
 				"service":     "svc-warehouse",
 				"team":        "team-foundry",
@@ -318,13 +328,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "linkedDashboard": "dash-warehouse", "oncall": "pd:data-platform"},
 		},
 		{
-			ID:        "inc-007",
-			Title:     "Recommendation quality drop after rollout",
-			Status:    "monitoring",
-			Severity:  "sev3",
-			Service:   "svc-recommendation",
-			CreatedAt: now.Add(-26 * time.Hour),
-			UpdatedAt: now.Add(-3 * time.Hour),
+			ID:          "inc-007",
+			Title:       "Recommendation quality drop after rollout",
+			Description: "New recommendation rollout degraded quality metrics",
+			Status:      "monitoring",
+			Severity:    "sev3",
+			Service:     "svc-recommendation",
+			CreatedAt:   now.Add(-26 * time.Hour),
+			UpdatedAt:   now.Add(-3 * time.Hour),
 			Fields: map[string]any{
 				"service":     "svc-recommendation",
 				"team":        "team-orion",
@@ -334,13 +345,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "experiment": "recotype-b", "linkedDashboard": "dash-reco"},
 		},
 		{
-			ID:        "inc-008",
-			Title:     "Analytics pipeline missing events from APAC",
-			Status:    "investigating",
-			Severity:  "sev2",
-			Service:   "svc-analytics",
-			CreatedAt: now.Add(-8 * time.Hour),
-			UpdatedAt: now.Add(-2 * time.Hour),
+			ID:          "inc-008",
+			Title:       "Analytics pipeline missing events from APAC",
+			Description: "Analytics pipeline missing events originating from APAC region",
+			Status:      "investigating",
+			Severity:    "sev2",
+			Service:     "svc-analytics",
+			CreatedAt:   now.Add(-8 * time.Hour),
+			UpdatedAt:   now.Add(-2 * time.Hour),
 			Fields: map[string]any{
 				"service":     "svc-analytics",
 				"team":        "team-lumen",
@@ -350,13 +362,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "linkedDashboard": "dash-analytics", "correlationId": "etl-apac-2219"},
 		},
 		{
-			ID:        "inc-009",
-			Title:     "Order placement errors for prepaid cards",
-			Status:    "open",
-			Severity:  "sev2",
-			Service:   "svc-order",
-			CreatedAt: now.Add(-3 * time.Hour),
-			UpdatedAt: now.Add(-1 * time.Hour),
+			ID:          "inc-009",
+			Title:       "Order placement errors for prepaid cards",
+			Description: "Orders paid with prepaid cards fail due to processor errors",
+			Status:      "open",
+			Severity:    "sev2",
+			Service:     "svc-order",
+			CreatedAt:   now.Add(-3 * time.Hour),
+			UpdatedAt:   now.Add(-1 * time.Hour),
 			Fields: map[string]any{
 				"service":       "svc-order",
 				"team":          "team-velocity",
@@ -366,13 +379,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "channel": "#orders", "linkedDashboard": "dash-orders"},
 		},
 		{
-			ID:        "inc-010",
-			Title:     "Catalog indexer backlog after schema change",
-			Status:    "mitigating",
-			Severity:  "sev4",
-			Service:   "svc-catalog",
-			CreatedAt: now.Add(-12 * time.Hour),
-			UpdatedAt: now.Add(-4 * time.Hour),
+			ID:          "inc-010",
+			Title:       "Catalog indexer backlog after schema change",
+			Description: "Catalog indexing backlog building after schema migration",
+			Status:      "mitigating",
+			Severity:    "sev4",
+			Service:     "svc-catalog",
+			CreatedAt:   now.Add(-12 * time.Hour),
+			UpdatedAt:   now.Add(-4 * time.Hour),
 			Fields: map[string]any{
 				"service":     "svc-catalog",
 				"team":        "team-atlas",
@@ -382,13 +396,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "runbook": "https://runbook.demo/catalog-index", "linkedDashboard": "dash-catalog"},
 		},
 		{
-			ID:        "inc-011",
-			Title:     "Shipping tracker returns stale data",
-			Status:    "monitoring",
-			Severity:  "sev4",
-			Service:   "svc-shipping",
-			CreatedAt: now.Add(-18 * time.Hour),
-			UpdatedAt: now.Add(-30 * time.Minute),
+			ID:          "inc-011",
+			Title:       "Shipping tracker returns stale data",
+			Description: "Shipping tracker caches are returning stale tracking payloads",
+			Status:      "monitoring",
+			Severity:    "sev4",
+			Service:     "svc-shipping",
+			CreatedAt:   now.Add(-18 * time.Hour),
+			UpdatedAt:   now.Add(-30 * time.Minute),
 			Fields: map[string]any{
 				"service":     "svc-shipping",
 				"team":        "team-hawkeye",
@@ -398,13 +413,14 @@ func (p *Provider) seed() {
 			Metadata: map[string]any{"source": p.cfg.Source, "channel": "#shipping", "linkedDashboard": "dash-shipping"},
 		},
 		{
-			ID:        "inc-012",
-			Title:     "Realtime updates disconnect in Firefox",
-			Status:    "open",
-			Severity:  "sev3",
-			Service:   "svc-realtime",
-			CreatedAt: now.Add(-2*time.Hour - 20*time.Minute),
-			UpdatedAt: now.Add(-15 * time.Minute),
+			ID:          "inc-012",
+			Title:       "Realtime updates disconnect in Firefox",
+			Description: "Realtime websocket connections drop for Firefox clients",
+			Status:      "open",
+			Severity:    "sev3",
+			Service:     "svc-realtime",
+			CreatedAt:   now.Add(-2*time.Hour - 20*time.Minute),
+			UpdatedAt:   now.Add(-15 * time.Minute),
 			Fields: map[string]any{
 				"service":     "svc-realtime",
 				"team":        "team-nova",
@@ -537,15 +553,16 @@ func inferService(in schema.CreateIncidentInput) string {
 
 func cloneIncident(in schema.Incident) schema.Incident {
 	return schema.Incident{
-		ID:        in.ID,
-		Title:     in.Title,
-		Status:    in.Status,
-		Severity:  in.Severity,
-		Service:   in.Service,
-		CreatedAt: in.CreatedAt,
-		UpdatedAt: in.UpdatedAt,
-		Fields:    mockutil.CloneMap(in.Fields),
-		Metadata:  mockutil.CloneMap(in.Metadata),
+		ID:          in.ID,
+		Title:       in.Title,
+		Description: in.Description,
+		Status:      in.Status,
+		Severity:    in.Severity,
+		Service:     in.Service,
+		CreatedAt:   in.CreatedAt,
+		UpdatedAt:   in.UpdatedAt,
+		Fields:      mockutil.CloneMap(in.Fields),
+		Metadata:    mockutil.CloneMap(in.Metadata),
 	}
 }
 
@@ -611,6 +628,9 @@ func matchesQuery(needle string, inc schema.Incident) bool {
 		return true
 	}
 	if strings.Contains(strings.ToLower(inc.Title), needle) {
+		return true
+	}
+	if inc.Description != "" && strings.Contains(strings.ToLower(inc.Description), needle) {
 		return true
 	}
 	if inc.Service != "" && strings.Contains(strings.ToLower(inc.Service), needle) {

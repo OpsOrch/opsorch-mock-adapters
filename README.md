@@ -1,6 +1,6 @@
 # OpsOrch Mock Adapters
 
-In-process adapters that provide realistic, self-contained demo data for OpsOrch capabilities: incidents, logs, metrics, tickets, messaging, services, and secrets.
+In-process adapters that provide realistic, self-contained demo data for OpsOrch capabilities: incidents, alerts, logs, metrics, tickets, messaging, services, and secrets.
 
 The providers register themselves under the name `mock` for their respective capability registries. They keep data in-memory and expose helpful defaults so the API is interactive without touching real systems.
 
@@ -10,6 +10,7 @@ Add the adapters to your Core binary and import them for side effects:
 
 ```go
 import (
+    _ "github.com/opsorch/opsorch-mock-adapters/alertmock"
     _ "github.com/opsorch/opsorch-mock-adapters/incidentmock"
     _ "github.com/opsorch/opsorch-mock-adapters/logmock"
     _ "github.com/opsorch/opsorch-mock-adapters/metricmock"
@@ -24,6 +25,7 @@ Start Core with the mock providers enabled (adjust config as desired):
 
 ```bash
 OPSORCH_INCIDENT_PROVIDER=mock \
+OPSORCH_ALERT_PROVIDER=mock \
 OPSORCH_LOG_PROVIDER=mock \
 OPSORCH_METRIC_PROVIDER=mock \
 OPSORCH_TICKET_PROVIDER=mock \
@@ -41,12 +43,13 @@ If you prefer plugin loading, build the binaries:
 make plugin
 ```
 
-This produces `bin/incidentplugin`, `bin/logplugin`, `bin/metricplugin`, `bin/ticketplugin`, `bin/messagingplugin`, `bin/serviceplugin`, and `bin/secretplugin`.
+This produces `bin/alertplugin`, `bin/incidentplugin`, `bin/logplugin`, `bin/metricplugin`, `bin/ticketplugin`, `bin/messagingplugin`, `bin/serviceplugin`, and `bin/secretplugin`.
 Point Core at them via `OPSORCH_<CAP>_PLUGIN=/full/path/to/bin/<name>`.
 
 ## Mock behaviors
 
 - **Incident**: seeded checkout/search incidents with timelines; supports create/update/timeline append; metadata stamped with `source` config.
+- **Alert**: seeded alert signals across services; supports query/get with scope-aware filtering to demo SLO/monitor surfaces.
 - **Log**: generates query-aware log lines within the requested window; infers severity/service from the query and returns structured fields.
 - **Metric**: builds deterministic waveforms for the requested expression, plus a "baseline" comparison series.
 - **Ticket**: seeded work items with assignees; supports create/update flows.

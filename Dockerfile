@@ -44,6 +44,7 @@ COPY --from=plugin-builder /out/plugins ./plugins
 
 # Default to mock plugins for every capability; users can override at runtime.
 ENV \
+  OPSORCH_ALERT_PLUGIN=/opt/opsorch/plugins/alertplugin \
   OPSORCH_INCIDENT_PLUGIN=/opt/opsorch/plugins/incidentplugin \
   OPSORCH_LOG_PLUGIN=/opt/opsorch/plugins/logplugin \
   OPSORCH_METRIC_PLUGIN=/opt/opsorch/plugins/metricplugin \
