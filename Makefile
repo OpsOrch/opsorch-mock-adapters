@@ -21,3 +21,6 @@ plugin:
 
 docker:
 	docker build -f Dockerfile -t opsorch-mock-adapters:latest --build-arg BASE_IMAGE=$(BASE_IMAGE) .
+
+run:
+	docker run --rm -p 8080:8080 opsorch-mock-adapters:latest

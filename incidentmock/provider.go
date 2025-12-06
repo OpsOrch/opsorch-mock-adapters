@@ -189,7 +189,11 @@ func (p *Provider) GetTimeline(ctx context.Context, id string) ([]schema.Timelin
 	if _, ok := p.incidents[id]; !ok {
 		return nil, orcherr.New("not_found", "incident not found", nil)
 	}
-	return cloneTimeline(p.timeline[id]), nil
+
+	// Get base timeline entries
+	entries := cloneTimeline(p.timeline[id])
+
+	return entries, nil
 }
 
 // AppendTimeline adds a timeline entry to an incident.
@@ -429,6 +433,162 @@ func (p *Provider) seed() {
 			},
 			Metadata: map[string]any{"source": p.cfg.Source, "linkedDashboard": "dash-realtime", "alertId": "pagerduty:RT-77"},
 		},
+		// SCENARIO-THEMED INCIDENTS
+		{
+			ID:          "inc-scenario-001",
+			Title:       "SLO Budget Exhaustion - Checkout Service",
+			Description: "Error budget for checkout service completely exhausted, 99.9% SLO breached",
+			Status:      "mitigating",
+			Severity:    "sev1",
+			Service:     "svc-checkout",
+			CreatedAt:   now.Add(-45 * time.Minute),
+			UpdatedAt:   now.Add(-10 * time.Minute),
+			Fields: map[string]any{
+				"scenario_id":      "slo-exhaustion",
+				"scenario_name":    "SLO Budget Exhaustion",
+				"scenario_stage":   "mitigation",
+				"service":          "svc-checkout",
+				"team":             "team-velocity",
+				"environment":      "prod",
+				"oncall_assignee":  "alex",
+				"escalation_level": 1,
+			},
+			Metadata: map[string]any{
+				"source":      p.cfg.Source,
+				"root_cause":  "increased traffic without autoscaling",
+				"is_scenario": true,
+			},
+		},
+		{
+			ID:          "inc-scenario-002",
+			Title:       "Cascading Failure - Database Connection Pool Exhaustion",
+			Description: "Database connection pool exhausted causing cascading failures across dependent services",
+			Status:      "investigating",
+			Severity:    "sev1",
+			Service:     "svc-database",
+			CreatedAt:   now.Add(-30 * time.Minute),
+			UpdatedAt:   now.Add(-5 * time.Minute),
+			Fields: map[string]any{
+				"scenario_id":      "cascading-failure",
+				"scenario_name":    "Cascading Failure",
+				"scenario_stage":   "propagation",
+				"service":          "svc-database",
+				"team":             "team-data",
+				"environment":      "prod",
+				"oncall_assignee":  "morgan",
+				"escalation_level": 2,
+			},
+			Metadata: map[string]any{
+				"source":      p.cfg.Source,
+				"root_cause":  "connection leak in checkout service",
+				"is_scenario": true,
+			},
+		},
+		{
+			ID:          "inc-scenario-003",
+			Title:       "Deployment Rollback - Payment Service v2.8.3",
+			Description: "Automated rollback triggered due to elevated error rates after deployment",
+			Status:      "monitoring",
+			Severity:    "sev2",
+			Service:     "svc-payments",
+			CreatedAt:   now.Add(-90 * time.Minute),
+			UpdatedAt:   now.Add(-20 * time.Minute),
+			Fields: map[string]any{
+				"scenario_id":      "deployment-rollback",
+				"scenario_name":    "Deployment Rollback",
+				"scenario_stage":   "rollback-complete",
+				"service":          "svc-payments",
+				"team":             "team-revenue",
+				"environment":      "prod",
+				"oncall_assignee":  "sam",
+				"escalation_level": 0,
+			},
+			Metadata: map[string]any{
+				"source":      p.cfg.Source,
+				"root_cause":  "incompatible API change",
+				"is_scenario": true,
+			},
+		},
+		{
+			ID:          "inc-scenario-004",
+			Title:       "External Dependency Failure - Stripe API Degradation",
+			Description: "Stripe payment API experiencing elevated latency and rate limiting, impacting checkout flow",
+			Status:      "investigating",
+			Severity:    "sev2",
+			Service:     "svc-checkout",
+			CreatedAt:   now.Add(-15 * time.Minute),
+			UpdatedAt:   now.Add(-2 * time.Minute),
+			Fields: map[string]any{
+				"scenario_id":       "external-dependency-failure",
+				"scenario_name":     "External Dependency Failure - Stripe",
+				"scenario_stage":    "active",
+				"service":           "svc-checkout",
+				"team":              "team-velocity",
+				"environment":       "prod",
+				"oncall_assignee":   "fern",
+				"escalation_level":  1,
+				"external_provider": "stripe",
+			},
+			Metadata: map[string]any{
+				"source":            p.cfg.Source,
+				"root_cause":        "stripe API rate limiting",
+				"affected_services": []string{"svc-checkout", "svc-payments"},
+				"is_scenario":       true,
+			},
+		},
+		{
+			ID:          "inc-scenario-005",
+			Title:       "Autoscaling Lag - Traffic Spike Exceeds Capacity",
+			Description: "Sudden traffic spike detected, autoscaling in progress but lagging behind demand",
+			Status:      "mitigating",
+			Severity:    "sev3",
+			Service:     "svc-search",
+			CreatedAt:   now.Add(-12 * time.Minute),
+			UpdatedAt:   now.Add(-1 * time.Minute),
+			Fields: map[string]any{
+				"scenario_id":      "autoscaling-lag",
+				"scenario_name":    "Autoscaling Lag",
+				"scenario_stage":   "scaling",
+				"service":          "svc-search",
+				"team":             "team-aurora",
+				"environment":      "prod",
+				"oncall_assignee":  "lena",
+				"escalation_level": 0,
+				"current_replicas": 3,
+				"target_replicas":  8,
+			},
+			Metadata: map[string]any{
+				"source":      p.cfg.Source,
+				"root_cause":  "traffic spike from marketing campaign",
+				"is_scenario": true,
+			},
+		},
+		{
+			ID:          "inc-scenario-006",
+			Title:       "Circuit Breaker Cascade - Recommendation Service Failure",
+			Description: "Circuit breakers tripping across multiple services due to recommendation service degradation",
+			Status:      "investigating",
+			Severity:    "sev1",
+			Service:     "svc-recommendation",
+			CreatedAt:   now.Add(-8 * time.Minute),
+			UpdatedAt:   now.Add(-1 * time.Minute),
+			Fields: map[string]any{
+				"scenario_id":      "circuit-breaker-cascade",
+				"scenario_name":    "Circuit Breaker Cascade",
+				"scenario_stage":   "escalating",
+				"service":          "svc-recommendation",
+				"team":             "team-orion",
+				"environment":      "prod",
+				"oncall_assignee":  "milo",
+				"escalation_level": 2,
+			},
+			Metadata: map[string]any{
+				"source":            p.cfg.Source,
+				"root_cause":        "recommendation model inference timeout",
+				"affected_services": []string{"svc-checkout", "svc-catalog", "svc-web"},
+				"is_scenario":       true,
+			},
+		},
 	}
 
 	for _, inc := range seed {
@@ -518,6 +678,50 @@ func (p *Provider) seed() {
 		{ID: "inc-012-t2", IncidentID: "inc-012", At: now.Add(-100 * time.Minute), Kind: "note", Body: "Disabled permessage-deflate for Firefox user agent", Actor: map[string]any{"type": "user", "name": "samir"}},
 		{ID: "inc-012-t3", IncidentID: "inc-012", At: now.Add(-40 * time.Minute), Kind: "note", Body: "Added 25s keepalive ping to websocket gateway", Actor: map[string]any{"type": "user", "name": "samir"}},
 		{ID: "inc-012-t4", IncidentID: "inc-012", At: now.Add(-15 * time.Minute), Kind: "note", Body: "User retry reports stable connections; preparing hotfix release", Actor: map[string]any{"type": "user", "name": "samir"}},
+	}
+
+	// Scenario incident timelines
+	p.timeline["inc-scenario-001"] = []schema.TimelineEntry{
+		{ID: "inc-scenario-001-t1", IncidentID: "inc-scenario-001", At: now.Add(-45 * time.Minute), Kind: "note", Body: "Incident detected: SLO Budget Exhaustion", Actor: map[string]any{"type": "system", "name": "alertmanager"}},
+		{ID: "inc-scenario-001-t2", IncidentID: "inc-scenario-001", At: now.Add(-40 * time.Minute), Kind: "note", Body: "Investigation started by alex", Actor: map[string]any{"type": "user", "name": "alex"}},
+		{ID: "inc-scenario-001-t3", IncidentID: "inc-scenario-001", At: now.Add(-30 * time.Minute), Kind: "note", Body: "Mitigation actions in progress", Actor: map[string]any{"type": "user", "name": "alex"}},
+		{ID: "inc-scenario-001-t4", IncidentID: "inc-scenario-001", At: now.Add(-10 * time.Minute), Kind: "note", Body: "Scaled up checkout service instances from 12 to 24", Actor: map[string]any{"type": "user", "name": "alex"}},
+	}
+
+	p.timeline["inc-scenario-002"] = []schema.TimelineEntry{
+		{ID: "inc-scenario-002-t1", IncidentID: "inc-scenario-002", At: now.Add(-30 * time.Minute), Kind: "note", Body: "Incident detected: Cascading Failure", Actor: map[string]any{"type": "system", "name": "alertmanager"}},
+		{ID: "inc-scenario-002-t2", IncidentID: "inc-scenario-002", At: now.Add(-25 * time.Minute), Kind: "note", Body: "Investigation started by morgan", Actor: map[string]any{"type": "user", "name": "morgan"}},
+		{ID: "inc-scenario-002-t3", IncidentID: "inc-scenario-002", At: now.Add(-15 * time.Minute), Kind: "note", Body: "Identified connection leak in checkout service", Actor: map[string]any{"type": "user", "name": "morgan"}},
+		{ID: "inc-scenario-002-t4", IncidentID: "inc-scenario-002", At: now.Add(-5 * time.Minute), Kind: "note", Body: "Restarted checkout service pods to release connections", Actor: map[string]any{"type": "user", "name": "morgan"}},
+	}
+
+	p.timeline["inc-scenario-003"] = []schema.TimelineEntry{
+		{ID: "inc-scenario-003-t1", IncidentID: "inc-scenario-003", At: now.Add(-90 * time.Minute), Kind: "note", Body: "Incident detected: Deployment Rollback", Actor: map[string]any{"type": "system", "name": "alertmanager"}},
+		{ID: "inc-scenario-003-t2", IncidentID: "inc-scenario-003", At: now.Add(-85 * time.Minute), Kind: "note", Body: "Investigation started by sam", Actor: map[string]any{"type": "user", "name": "sam"}},
+		{ID: "inc-scenario-003-t3", IncidentID: "inc-scenario-003", At: now.Add(-75 * time.Minute), Kind: "note", Body: "Mitigation actions in progress", Actor: map[string]any{"type": "user", "name": "sam"}},
+		{ID: "inc-scenario-003-t4", IncidentID: "inc-scenario-003", At: now.Add(-60 * time.Minute), Kind: "note", Body: "Rolled back payment service from v2.8.3 to v2.8.2", Actor: map[string]any{"type": "user", "name": "sam"}},
+		{ID: "inc-scenario-003-t5", IncidentID: "inc-scenario-003", At: now.Add(-20 * time.Minute), Kind: "note", Body: "Mitigation applied, monitoring for stability", Actor: map[string]any{"type": "user", "name": "sam"}},
+	}
+
+	p.timeline["inc-scenario-004"] = []schema.TimelineEntry{
+		{ID: "inc-scenario-004-t1", IncidentID: "inc-scenario-004", At: now.Add(-15 * time.Minute), Kind: "note", Body: "Incident detected: External Dependency Failure", Actor: map[string]any{"type": "system", "name": "alertmanager"}},
+		{ID: "inc-scenario-004-t2", IncidentID: "inc-scenario-004", At: now.Add(-12 * time.Minute), Kind: "note", Body: "Investigation started by fern", Actor: map[string]any{"type": "user", "name": "fern"}},
+		{ID: "inc-scenario-004-t3", IncidentID: "inc-scenario-004", At: now.Add(-8 * time.Minute), Kind: "note", Body: "Confirmed Stripe API rate limiting affecting checkout", Actor: map[string]any{"type": "user", "name": "fern"}},
+		{ID: "inc-scenario-004-t4", IncidentID: "inc-scenario-004", At: now.Add(-5 * time.Minute), Kind: "note", Body: "Enabled circuit breaker for Stripe API calls", Actor: map[string]any{"type": "user", "name": "fern"}},
+	}
+
+	p.timeline["inc-scenario-005"] = []schema.TimelineEntry{
+		{ID: "inc-scenario-005-t1", IncidentID: "inc-scenario-005", At: now.Add(-12 * time.Minute), Kind: "note", Body: "Incident detected: Autoscaling Lag", Actor: map[string]any{"type": "system", "name": "alertmanager"}},
+		{ID: "inc-scenario-005-t2", IncidentID: "inc-scenario-005", At: now.Add(-10 * time.Minute), Kind: "note", Body: "Investigation started by lena", Actor: map[string]any{"type": "user", "name": "lena"}},
+		{ID: "inc-scenario-005-t3", IncidentID: "inc-scenario-005", At: now.Add(-6 * time.Minute), Kind: "note", Body: "Identified traffic spike from marketing campaign", Actor: map[string]any{"type": "user", "name": "lena"}},
+		{ID: "inc-scenario-005-t4", IncidentID: "inc-scenario-005", At: now.Add(-3 * time.Minute), Kind: "note", Body: "Manually scaled search service from 3 to 8 replicas", Actor: map[string]any{"type": "user", "name": "lena"}},
+	}
+
+	p.timeline["inc-scenario-006"] = []schema.TimelineEntry{
+		{ID: "inc-scenario-006-t1", IncidentID: "inc-scenario-006", At: now.Add(-8 * time.Minute), Kind: "note", Body: "Incident detected: Circuit Breaker Cascade", Actor: map[string]any{"type": "system", "name": "alertmanager"}},
+		{ID: "inc-scenario-006-t2", IncidentID: "inc-scenario-006", At: now.Add(-6 * time.Minute), Kind: "note", Body: "Investigation started by milo", Actor: map[string]any{"type": "user", "name": "milo"}},
+		{ID: "inc-scenario-006-t3", IncidentID: "inc-scenario-006", At: now.Add(-4 * time.Minute), Kind: "note", Body: "Identified recommendation model inference timeout", Actor: map[string]any{"type": "user", "name": "milo"}},
+		{ID: "inc-scenario-006-t4", IncidentID: "inc-scenario-006", At: now.Add(-2 * time.Minute), Kind: "note", Body: "Restarting recommendation service pods", Actor: map[string]any{"type": "user", "name": "milo"}},
 	}
 }
 

@@ -50,6 +50,13 @@ func (p *Provider) Query(ctx context.Context, query schema.TicketQuery) ([]schem
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	// Add static scenario-themed tickets
+	now := time.Now().UTC()
+	scenarioTickets := getScenarioTickets(now)
+	for _, st := range scenarioTickets {
+		p.tickets[st.ID] = st
+	}
+
 	ids := sortedTicketIDs(p.tickets)
 	results := make([]schema.Ticket, 0, len(p.tickets))
 	for _, id := range ids {
@@ -333,6 +340,7 @@ func (p *Provider) seed() {
 	}
 
 	for _, tk := range seed {
+		applyTicketFlair(&tk, now)
 		p.tickets[tk.ID] = tk
 		if n, err := fmt.Sscanf(tk.ID, "TCK-%d", &p.nextID); n == 1 && err == nil {
 			// keep last parsed id
@@ -346,6 +354,108 @@ func parseConfig(cfg map[string]any) Config {
 		out.Source = v
 	}
 	return out
+}
+
+func applyTicketFlair(tk *schema.Ticket, now time.Time) {
+	if tk.Fields == nil {
+		tk.Fields = map[string]any{}
+	}
+	service, _ := tk.Fields["service"].(string)
+	links := serviceLinks(service)
+	tk.Fields["links"] = links
+	tk.Fields["checklist"] = []map[string]any{
+		{"label": "Review dashboards", "done": tk.Status != "todo"},
+		{"label": "Post update in #ops", "done": tk.Status == "in_progress" || tk.Status == "in_review"},
+	}
+	tk.Fields["dueDate"] = now.Add(dueDurationForStatus(tk.Status))
+	tk.Fields["dependencies"] = dependencyHints(service)
+	tk.Fields["effortHours"] = 6 + len(tk.Assignees)*2
+	if tk.Metadata == nil {
+		tk.Metadata = map[string]any{}
+	}
+	tk.Metadata["relatedIncidents"] = relatedIncidents(service)
+	clonedLinks := append([]string(nil), links...)
+	tk.Metadata["links"] = clonedLinks
+	if len(tk.Assignees) > 0 {
+		tk.Metadata["lastUpdatedBy"] = tk.Assignees[0]
+	}
+}
+
+func serviceLinks(service string) []string {
+	key := ticketServiceKey(service)
+	if key == "" {
+		key = "platform"
+	}
+	return []string{
+		fmt.Sprintf("https://runbook.demo/%s", key),
+		fmt.Sprintf("https://grafana.demo/d/%s", key),
+	}
+}
+
+func dueDurationForStatus(status string) time.Duration {
+	switch status {
+	case "todo":
+		return 72 * time.Hour
+	case "in_progress":
+		return 36 * time.Hour
+	case "in_review":
+		return 12 * time.Hour
+	default:
+		return 48 * time.Hour
+	}
+}
+
+func dependencyHints(service string) []string {
+	switch ticketServiceKey(service) {
+	case "checkout":
+		return []string{"svc-payments", "svc-order"}
+	case "search":
+		return []string{"svc-web"}
+	case "payments":
+		return []string{"svc-notifications", "svc-order"}
+	case "notifications":
+		return []string{"svc-analytics"}
+	case "identity":
+		return []string{"svc-web", "svc-notifications"}
+	case "warehouse":
+		return []string{"svc-analytics"}
+	case "realtime":
+		return []string{"svc-web"}
+	default:
+		return []string{"platform"}
+	}
+}
+
+func relatedIncidents(service string) []string {
+	switch ticketServiceKey(service) {
+	case "checkout":
+		return []string{"inc-001"}
+	case "search":
+		return []string{"inc-002"}
+	case "payments":
+		return []string{"inc-003"}
+	case "notifications":
+		return []string{"inc-004"}
+	case "identity":
+		return []string{"inc-005"}
+	case "warehouse":
+		return []string{"inc-006"}
+	case "analytics":
+		return []string{"inc-008"}
+	case "order":
+		return []string{"inc-009"}
+	case "realtime":
+		return []string{"inc-012"}
+	default:
+		return nil
+	}
+}
+
+func ticketServiceKey(service string) string {
+	if service == "" {
+		return ""
+	}
+	return strings.TrimPrefix(service, "svc-")
 }
 
 func cloneTicket(in schema.Ticket) schema.Ticket {
@@ -474,6 +584,245 @@ func matchesQuery(filter string, tk schema.Ticket) bool {
 	}
 
 	return false
+}
+
+// getScenarioTickets returns static scenario-themed tickets
+func getScenarioTickets(now time.Time) []schema.Ticket {
+	return []schema.Ticket{
+		{
+			ID:          "TCK-SCENARIO-001",
+			Key:         "TCK-SCENARIO-001",
+			Title:       "SLO Budget Exhaustion - Payment Gateway Timeouts",
+			Description: "Investigate and mitigate payment gateway timeouts causing SLO budget exhaustion. Error rate exceeded threshold at 15:30 UTC.",
+			Status:      "in_progress",
+			Assignees:   []string{"alex", "sam"},
+			Reporter:    "sre-bot",
+			CreatedAt:   now.Add(-25 * time.Minute),
+			UpdatedAt:   now.Add(-5 * time.Minute),
+			Fields: map[string]any{
+				"service":           "svc-checkout",
+				"environment":       "prod",
+				"team":              "team-velocity",
+				"priority":          "P0",
+				"sprint":            "2024-12-a",
+				"incident_id":       "inc-scenario-001",
+				"scenario_id":       "scenario-001",
+				"scenario_name":     "SLO Budget Exhaustion",
+				"scenario_stage":    "active",
+				"is_scenario":       true,
+				"error_budget_burn": "85%",
+				"affected_regions":  []string{"use1", "euw1"},
+				"labels":            []string{"slo", "payments", "urgent"},
+			},
+			Metadata: map[string]any{
+				"source":         "mock",
+				"scenario_id":    "scenario-001",
+				"scenario_name":  "SLO Budget Exhaustion",
+				"scenario_stage": "active",
+				"incident_id":    "inc-scenario-001",
+				"links": []string{
+					"https://runbook.demo/checkout",
+					"https://grafana.demo/d/checkout",
+				},
+				"relatedIncidents": []string{"inc-scenario-001"},
+			},
+		},
+		{
+			ID:          "TCK-SCENARIO-002",
+			Key:         "TCK-SCENARIO-002",
+			Title:       "Database Connection Pool Exhaustion - Search Service",
+			Description: "Cascading failure in search service due to database connection pool exhaustion. Implement connection pooling improvements and add monitoring.",
+			Status:      "todo",
+			Assignees:   []string{"jamie"},
+			Reporter:    "incident-manager",
+			CreatedAt:   now.Add(-20 * time.Minute),
+			UpdatedAt:   now.Add(-10 * time.Minute),
+			Fields: map[string]any{
+				"service":          "svc-search",
+				"environment":      "prod",
+				"team":             "team-aurora",
+				"priority":         "P0",
+				"sprint":           "2024-12-a",
+				"incident_id":      "inc-scenario-002",
+				"scenario_id":      "scenario-002",
+				"scenario_name":    "Cascading Database Failure",
+				"scenario_stage":   "escalating",
+				"is_scenario":      true,
+				"db_connections":   "100/100",
+				"affected_queries": []string{"search", "autocomplete", "trending"},
+				"labels":           []string{"database", "cascading-failure", "critical"},
+			},
+			Metadata: map[string]any{
+				"source":         "mock",
+				"scenario_id":    "scenario-002",
+				"scenario_name":  "Cascading Database Failure",
+				"scenario_stage": "escalating",
+				"incident_id":    "inc-scenario-002",
+				"links": []string{
+					"https://runbook.demo/search",
+					"https://grafana.demo/d/search",
+				},
+				"relatedIncidents": []string{"inc-scenario-002"},
+			},
+		},
+		{
+			ID:          "TCK-SCENARIO-003",
+			Key:         "TCK-SCENARIO-003",
+			Title:       "Deployment Rollback - Payment Service v2.31.4",
+			Description: "Rollback payment service deployment due to elevated error rates. Document root cause and implement additional pre-deployment checks.",
+			Status:      "in_review",
+			Assignees:   []string{"taylor", "devon"},
+			Reporter:    "deploy-bot",
+			CreatedAt:   now.Add(-15 * time.Minute),
+			UpdatedAt:   now.Add(-3 * time.Minute),
+			Fields: map[string]any{
+				"service":          "svc-checkout",
+				"environment":      "prod",
+				"team":             "team-velocity",
+				"priority":         "P1",
+				"sprint":           "2024-12-a",
+				"incident_id":      "inc-scenario-003",
+				"scenario_id":      "scenario-003",
+				"scenario_name":    "Deployment Rollback",
+				"scenario_stage":   "mitigating",
+				"is_scenario":      true,
+				"deployment_id":    "deploy-2024-12-07-003",
+				"rollback_reason":  "error_rate_threshold_exceeded",
+				"previous_version": "v2.31.3",
+				"failed_version":   "v2.31.4",
+				"labels":           []string{"deployment", "rollback", "postmortem"},
+			},
+			Metadata: map[string]any{
+				"source":         "mock",
+				"scenario_id":    "scenario-003",
+				"scenario_name":  "Deployment Rollback",
+				"scenario_stage": "mitigating",
+				"incident_id":    "inc-scenario-003",
+				"links": []string{
+					"https://runbook.demo/checkout",
+					"https://grafana.demo/d/checkout",
+				},
+				"relatedIncidents": []string{"inc-scenario-003"},
+			},
+		},
+		{
+			ID:          "TCK-SCENARIO-004",
+			Key:         "TCK-SCENARIO-004",
+			Title:       "External Dependency Failure - Stripe API Rate Limiting",
+			Description: "Implement retry logic and circuit breaker for Stripe API calls. Add monitoring for external dependency health.",
+			Status:      "in_progress",
+			Assignees:   []string{"morgan", "riley"},
+			Reporter:    "platform-team",
+			CreatedAt:   now.Add(-12 * time.Minute),
+			UpdatedAt:   now.Add(-2 * time.Minute),
+			Fields: map[string]any{
+				"service":          "svc-checkout",
+				"environment":      "prod",
+				"team":             "team-velocity",
+				"priority":         "P1",
+				"sprint":           "2024-12-a",
+				"incident_id":      "inc-scenario-004",
+				"scenario_id":      "scenario-004",
+				"scenario_name":    "External Dependency Failure - Stripe",
+				"scenario_stage":   "active",
+				"is_scenario":      true,
+				"external_service": "stripe",
+				"external_error":   "rate_limit_exceeded",
+				"retry_strategy":   "exponential_backoff",
+				"circuit_breaker":  "implementing",
+				"labels":           []string{"external-dependency", "stripe", "resilience"},
+			},
+			Metadata: map[string]any{
+				"source":         "mock",
+				"scenario_id":    "scenario-004",
+				"scenario_name":  "External Dependency Failure - Stripe",
+				"scenario_stage": "active",
+				"incident_id":    "inc-scenario-004",
+				"links": []string{
+					"https://runbook.demo/checkout",
+					"https://grafana.demo/d/checkout",
+				},
+				"relatedIncidents": []string{"inc-scenario-004"},
+			},
+		},
+		{
+			ID:          "TCK-SCENARIO-005",
+			Key:         "TCK-SCENARIO-005",
+			Title:       "Autoscaling Lag - Search Service Capacity",
+			Description: "Tune autoscaling policies for search service to reduce lag during traffic spikes. Add predictive scaling based on historical patterns.",
+			Status:      "todo",
+			Assignees:   []string{"kim"},
+			Reporter:    "capacity-planning",
+			CreatedAt:   now.Add(-8 * time.Minute),
+			UpdatedAt:   now.Add(-1 * time.Minute),
+			Fields: map[string]any{
+				"service":            "svc-search",
+				"environment":        "prod",
+				"team":               "team-aurora",
+				"priority":           "P2",
+				"sprint":             "2024-12-a",
+				"scenario_id":        "scenario-005",
+				"scenario_name":      "Autoscaling Lag",
+				"scenario_stage":     "active",
+				"is_scenario":        true,
+				"current_instances":  3,
+				"target_instances":   8,
+				"scaling_duration":   "5m",
+				"autoscaling_policy": "cpu-based",
+				"labels":             []string{"autoscaling", "capacity", "performance"},
+			},
+			Metadata: map[string]any{
+				"source":         "mock",
+				"scenario_id":    "scenario-005",
+				"scenario_name":  "Autoscaling Lag",
+				"scenario_stage": "active",
+				"links": []string{
+					"https://runbook.demo/search",
+					"https://grafana.demo/d/search",
+				},
+			},
+		},
+		{
+			ID:          "TCK-SCENARIO-006",
+			Key:         "TCK-SCENARIO-006",
+			Title:       "Circuit Breaker Cascade - Payment Gateway",
+			Description: "Investigate circuit breaker cascade in payment gateway. Implement bulkhead pattern and improve failure isolation.",
+			Status:      "in_progress",
+			Assignees:   []string{"samir", "maya"},
+			Reporter:    "sre-lead",
+			CreatedAt:   now.Add(-5 * time.Minute),
+			UpdatedAt:   now.Add(-1 * time.Minute),
+			Fields: map[string]any{
+				"service":            "svc-checkout",
+				"environment":        "prod",
+				"team":               "team-velocity",
+				"priority":           "P0",
+				"sprint":             "2024-12-a",
+				"incident_id":        "inc-scenario-006",
+				"scenario_id":        "scenario-006",
+				"scenario_name":      "Circuit Breaker Cascade",
+				"scenario_stage":     "escalating",
+				"is_scenario":        true,
+				"circuit_state":      "open",
+				"failure_threshold":  "5/10",
+				"downstream_service": "payment-gateway",
+				"affected_regions":   []string{"use1", "aps1"},
+				"labels":             []string{"circuit-breaker", "cascading-failure", "resilience"},
+			},
+			Metadata: map[string]any{
+				"source":         "mock",
+				"scenario_id":    "scenario-006",
+				"scenario_name":  "Circuit Breaker Cascade",
+				"scenario_stage": "escalating",
+				"incident_id":    "inc-scenario-006",
+				"links": []string{
+					"https://runbook.demo/checkout",
+					"https://grafana.demo/d/checkout",
+				},
+				"relatedIncidents": []string{"inc-scenario-006"},
+			},
+		},
+	}
 }
 
 var _ coreticket.Provider = (*Provider)(nil)

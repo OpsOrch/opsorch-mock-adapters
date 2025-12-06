@@ -2,6 +2,7 @@ package servicemock
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/opsorch/opsorch-core/schema"
@@ -53,7 +54,11 @@ func (p *Provider) Query(ctx context.Context, query schema.ServiceQuery) ([]sche
 		if !matchesScope(query.Scope, svc) {
 			continue
 		}
-		results = append(results, cloneService(svc))
+
+		// Clone service for result
+		enriched := cloneService(svc)
+
+		results = append(results, enriched)
 		if query.Limit > 0 && len(results) >= query.Limit {
 			break
 		}
@@ -216,11 +221,69 @@ func seedServices(cfg Config) []schema.Service {
 		},
 	}
 
+	for i := range base {
+		applyServiceFlair(&base[i])
+	}
 	out := make([]schema.Service, len(base))
 	for i, svc := range base {
 		out[i] = cloneService(svc)
 	}
 	return out
+}
+
+func applyServiceFlair(svc *schema.Service) {
+	if svc.Metadata == nil {
+		svc.Metadata = map[string]any{}
+	}
+	slug := serviceSlug(svc.ID)
+	owner := svc.Tags["owner"]
+	contacts := map[string]string{
+		"slack": fmt.Sprintf("#%s", strings.TrimPrefix(owner, "team-")),
+		"email": fmt.Sprintf("%s@demo", strings.TrimPrefix(owner, "team-")),
+		"pager": fmt.Sprintf("pagerduty://%s", strings.TrimPrefix(owner, "team-")),
+	}
+	svc.Metadata["contacts"] = contacts
+	svc.Metadata["dependencies"] = serviceDependencies(svc.ID)
+	svc.Metadata["repositories"] = []string{fmt.Sprintf("https://github.com/opsorch/%s", slug)}
+	svc.Metadata["dashboards"] = []string{fmt.Sprintf("https://grafana.demo/d/%s-overview", slug)}
+	svc.Metadata["goldenMetrics"] = []string{"latency", "errors", "saturation"}
+}
+
+func serviceDependencies(id string) []string {
+	switch id {
+	case "svc-checkout":
+		return []string{"svc-payments", "svc-order", "svc-notifications"}
+	case "svc-search":
+		return []string{"svc-web", "svc-catalog"}
+	case "svc-web":
+		return []string{"svc-realtime"}
+	case "svc-payments":
+		return []string{"svc-identity"}
+	case "svc-notifications":
+		return []string{"svc-analytics"}
+	case "svc-identity":
+		return []string{"svc-web"}
+	case "svc-warehouse":
+		return []string{"svc-analytics"}
+	case "svc-recommendation":
+		return []string{"svc-catalog", "svc-analytics"}
+	case "svc-analytics":
+		return []string{"svc-warehouse"}
+	case "svc-order":
+		return []string{"svc-checkout", "svc-payments"}
+	case "svc-catalog":
+		return []string{"svc-warehouse"}
+	case "svc-shipping":
+		return []string{"svc-order"}
+	case "svc-realtime":
+		return []string{"svc-notifications"}
+	default:
+		return nil
+	}
+}
+
+func serviceSlug(id string) string {
+	return strings.TrimPrefix(id, "svc-")
 }
 
 func cloneService(in schema.Service) schema.Service {

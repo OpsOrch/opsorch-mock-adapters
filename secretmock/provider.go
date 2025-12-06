@@ -26,6 +26,9 @@ type Provider struct {
 // New constructs the mock secret provider.
 func New(cfg map[string]any) (secret.Provider, error) {
 	parsed := parseConfig(cfg)
+	if len(parsed.Secrets) == 0 {
+		parsed.Secrets = defaultSecrets()
+	}
 	store := make(map[string]string, len(parsed.Secrets))
 	for k, v := range parsed.Secrets {
 		store[k] = v
@@ -72,6 +75,16 @@ func parseConfig(cfg map[string]any) Config {
 		}
 	}
 	return out
+}
+
+func defaultSecrets() map[string]string {
+	return map[string]string{
+		"db/checkout/password":  "ch3ck0ut-demo#2024",
+		"slack/webhook/ops":     "https://hooks.slack.com/services/T00000000/B00000000/placeholder",
+		"api/stripe/key":        "sk_test_mock123",
+		"gcp/service-account":   "{\"type\":\"service_account\",\"project_id\":\"mock-demo\"}",
+		"secrets/feature-flags": "enabled=true, cohorts=alpha",
+	}
 }
 
 var _ secret.Provider = (*Provider)(nil)
