@@ -18,6 +18,7 @@ This repository provides mock implementations for all OpsOrch capabilities:
 6. **Messaging Provider**: Simulated message delivery with metadata
 7. **Service Provider**: Static service catalog
 8. **Secret Provider**: Simple key/value secret store
+9. **Deployment Provider**: In-memory deployment history with scenario data
 
 ## Features
 
@@ -70,6 +71,13 @@ These adapters intentionally stay simple: data is seeded from Go structs, scoped
 - Extremely small key/value secret store for demos
 - Defaults include DB passwords, Stripe keys, Slack webhooks
 - Supports Get and Put for secret rotation flows
+
+### Deployment Provider (`deploymentmock`)
+- Seeds ~16 deployment records covering various services and environments
+- Supports filtering by service, environment, status, and metadata
+- Enriched with version info, commit hashes, deployment types (blue/green, canary, rolling)
+- Scenario deployments demonstrate deployment failures and rollbacks
+- Includes deployment metadata like duration, health checks, and monitoring links
 
 ## Configuration
 
@@ -125,6 +133,12 @@ Mock adapters have minimal configuration requirements since they don't connect t
 |-------|------|----------|-------------|---------|
 | `secrets` | map | No | Pre-seeded key/value pairs | Default secrets (DB passwords, API keys) |
 
+### Deployment Provider
+
+| Field | Type | Required | Description | Default |
+|-------|------|----------|-------------|---------|
+| `source` | string | No | Source identifier stamped in `Metadata["source"]` | `mock` |
+
 ## Usage
 
 ### Embed Directly Inside OpsOrch Core
@@ -141,6 +155,7 @@ import (
     _ "github.com/opsorch/opsorch-mock-adapters/messagingmock"
     _ "github.com/opsorch/opsorch-mock-adapters/servicemock"
     _ "github.com/opsorch/opsorch-mock-adapters/secretmock"
+    _ "github.com/opsorch/opsorch-mock-adapters/deploymentmock"
 )
 ```
 
@@ -155,6 +170,7 @@ OPSORCH_TICKET_PROVIDER=mock \
 OPSORCH_MESSAGING_PROVIDER=mock \
 OPSORCH_SERVICE_PROVIDER=mock \
 OPSORCH_SECRET_PROVIDER=mock \
+OPSORCH_DEPLOYMENT_PROVIDER=mock \
 go run ./cmd/opsorch
 ```
 
@@ -245,6 +261,7 @@ opsorch-mock-adapters/
 ├── messagingmock/    # Messaging provider
 ├── servicemock/      # Service catalog
 ├── secretmock/       # Secret store
+├── deploymentmock/   # Deployment provider
 ├── internal/
 │   ├── mockutil/     # Shared helpers + alert store
 │   └── pluginrpc/    # JSON RPC harness for plugins
@@ -312,6 +329,7 @@ Each plugin supports the standard methods for its capability:
 - **Messaging Plugin**: `messaging.send`
 - **Service Plugin**: `service.query`
 - **Secret Plugin**: `secret.get`, `secret.put`
+- **Deployment Plugin**: `deployment.query`, `deployment.get`
 
 ## Use Cases
 

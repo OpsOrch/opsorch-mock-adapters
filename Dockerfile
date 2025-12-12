@@ -52,5 +52,6 @@ ENV \
   OPSORCH_MESSAGING_PLUGIN=/opt/opsorch/plugins/messagingplugin \
   OPSORCH_SERVICE_PLUGIN=/opt/opsorch/plugins/serviceplugin \
   OPSORCH_SECRET_PLUGIN=/opt/opsorch/plugins/secretplugin \
+  OPSORCH_DEPLOYMENT_PLUGIN=/opt/opsorch/plugins/deploymentplugin \
   OPSORCH_BEARER_TOKEN=demo
  
