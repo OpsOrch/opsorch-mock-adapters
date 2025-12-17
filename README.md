@@ -19,6 +19,7 @@ This repository provides mock implementations for all OpsOrch capabilities:
 7. **Service Provider**: Static service catalog
 8. **Secret Provider**: Simple key/value secret store
 9. **Deployment Provider**: In-memory deployment history with scenario data
+10. **Team Provider**: Static team hierarchy with realistic organizational structure
 
 ## Features
 
@@ -78,6 +79,13 @@ These adapters intentionally stay simple: data is seeded from Go structs, scoped
 - Enriched with version info, commit hashes, deployment types (blue/green, canary, rolling)
 - Scenario deployments demonstrate deployment failures and rollbacks
 - Includes deployment metadata like duration, health checks, and monitoring links
+
+### Team Provider (`teammock`)
+- Seeds realistic organizational structure with departments and teams
+- Hierarchical teams (Engineering → Backend/Frontend/DevOps, Product → Design)
+- Rich team member data with roles, locations, skills, and contact information
+- Supports filtering by name, tags (type, focus), and scope
+- Demonstrates team ownership patterns and organizational relationships
 
 ## Configuration
 
@@ -139,6 +147,12 @@ Mock adapters have minimal configuration requirements since they don't connect t
 |-------|------|----------|-------------|---------|
 | `source` | string | No | Source identifier stamped in `Metadata["source"]` | `mock` |
 
+### Team Provider
+
+| Field | Type | Required | Description | Default |
+|-------|------|----------|-------------|---------|
+| `organization` | string | No | Organization name used in team metadata | `demo-org` |
+
 ## Usage
 
 ### Embed Directly Inside OpsOrch Core
@@ -156,6 +170,7 @@ import (
     _ "github.com/opsorch/opsorch-mock-adapters/servicemock"
     _ "github.com/opsorch/opsorch-mock-adapters/secretmock"
     _ "github.com/opsorch/opsorch-mock-adapters/deploymentmock"
+    _ "github.com/opsorch/opsorch-mock-adapters/teammock"
 )
 ```
 
@@ -171,6 +186,7 @@ OPSORCH_MESSAGING_PROVIDER=mock \
 OPSORCH_SERVICE_PROVIDER=mock \
 OPSORCH_SECRET_PROVIDER=mock \
 OPSORCH_DEPLOYMENT_PROVIDER=mock \
+OPSORCH_TEAM_PROVIDER=mock \
 go run ./cmd/opsorch
 ```
 
@@ -262,6 +278,7 @@ opsorch-mock-adapters/
 ├── servicemock/      # Service catalog
 ├── secretmock/       # Secret store
 ├── deploymentmock/   # Deployment provider
+├── teammock/         # Team provider
 ├── internal/
 │   ├── mockutil/     # Shared helpers + alert store
 │   └── pluginrpc/    # JSON RPC harness for plugins
@@ -330,6 +347,7 @@ Each plugin supports the standard methods for its capability:
 - **Service Plugin**: `service.query`
 - **Secret Plugin**: `secret.get`, `secret.put`
 - **Deployment Plugin**: `deployment.query`, `deployment.get`
+- **Team Plugin**: `team.query`, `team.get`, `team.members`
 
 ## Use Cases
 

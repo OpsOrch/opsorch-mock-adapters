@@ -1,4 +1,4 @@
-github.com/opsorch/opsorch-core v0.1.0 h1:Kxj6dq2CzhB+zn16kNLdroA4p3L4Rc17cg0NJCB1AdQ=
-github.com/opsorch/opsorch-core v0.1.0/go.mod h1:uTRy4baWBXBTMPM/9OmgwkmbnFMy1yXlEKJhCNtjCFM=
+github.com/opsorch/opsorch-core v0.2.0 h1:e9/yW8nBJMM7VLnL2IuYZBz4GTKNhBdQIcvEAFdBCUw=
+github.com/opsorch/opsorch-core v0.2.0/go.mod h1:uTRy4baWBXBTMPM/9OmgwkmbnFMy1yXlEKJhCNtjCFM=
 golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
 golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=

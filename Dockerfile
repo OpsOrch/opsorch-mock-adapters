@@ -5,7 +5,7 @@
 # opsorch-mock-adapters (e.g. run from repo root with -f opsorch-mock-adapters/Dockerfile . or ..).
 
 ARG GO_VERSION=1.22
-ARG BASE_IMAGE=ghcr.io/opsorch/opsorch-core:latest
+ARG BASE_IMAGE=ghcr.io/opsorch/opsorch-core:v0.2.0
 ARG PLUGINS=""
 
 FROM golang:${GO_VERSION} AS plugin-builder
@@ -53,5 +53,6 @@ ENV \
   OPSORCH_SERVICE_PLUGIN=/opt/opsorch/plugins/serviceplugin \
   OPSORCH_SECRET_PLUGIN=/opt/opsorch/plugins/secretplugin \
   OPSORCH_DEPLOYMENT_PLUGIN=/opt/opsorch/plugins/deploymentplugin \
+  OPSORCH_TEAM_PLUGIN=/opt/opsorch/plugins/teamplugin \
   OPSORCH_BEARER_TOKEN=demo
  

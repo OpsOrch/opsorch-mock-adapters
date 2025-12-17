@@ -2,7 +2,7 @@
 
 .PHONY: fmt test plugin docker
 
-PLUGINS ?= alertplugin incidentplugin logplugin metricplugin ticketplugin messagingplugin serviceplugin secretplugin deploymentplugin
+PLUGINS ?= alertplugin incidentplugin logplugin metricplugin ticketplugin messagingplugin serviceplugin secretplugin deploymentplugin teamplugin
 BASE_IMAGE ?= ghcr.io/opsorch/opsorch-core:latest
 
 fmt:
