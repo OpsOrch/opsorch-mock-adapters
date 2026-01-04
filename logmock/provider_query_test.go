@@ -38,12 +38,12 @@ func TestQuery_WithSearchExpression_ReturnsMatchingLogs(t *testing.T) {
 		t.Fatalf("Query failed: %v", err)
 	}
 
-	if len(logs) == 0 {
+	if len(logs.Entries) == 0 {
 		t.Fatal("Expected logs to be returned, got none")
 	}
 
 	// Verify all logs match the search terms
-	for _, log := range logs {
+	for _, log := range logs.Entries {
 		matched := false
 		searchText := log.Message + " " + log.Service
 		if containsAny(searchText, []string{"redis", "connection refused", "oom command not allowed", "misconf redis"}) {
@@ -74,8 +74,8 @@ func TestQuery_WithSearchExpression_ReturnsMatchingLogs(t *testing.T) {
 	}
 
 	// Verify limit is respected
-	if len(logs) > query.Limit {
-		t.Errorf("Expected at most %d logs, got %d", query.Limit, len(logs))
+	if len(logs.Entries) > query.Limit {
+		t.Errorf("Expected at most %d logs, got %d", query.Limit, len(logs.Entries))
 	}
 }
 
@@ -101,13 +101,13 @@ func TestQuery_WithQuotedPhrase_ReturnsMatchingLogs(t *testing.T) {
 		t.Fatalf("Query failed: %v", err)
 	}
 
-	if len(logs) == 0 {
+	if len(logs.Entries) == 0 {
 		t.Fatal("Expected logs to be returned, got none")
 	}
 
 	// At least one log should contain the exact phrase
 	foundPhrase := false
-	for _, log := range logs {
+	for _, log := range logs.Entries {
 		if containsIgnoreCase(log.Message, "connection refused") {
 			foundPhrase = true
 			break
@@ -144,12 +144,12 @@ func TestQuery_WithServiceFilter_ReturnsServiceLogs(t *testing.T) {
 		t.Fatalf("Query failed: %v", err)
 	}
 
-	if len(logs) == 0 {
+	if len(logs.Entries) == 0 {
 		t.Fatal("Expected logs to be returned, got none")
 	}
 
 	// All logs should be for svc-cache
-	for _, log := range logs {
+	for _, log := range logs.Entries {
 		if log.Service != "svc-cache" {
 			t.Errorf("Expected service=svc-cache, got %s", log.Service)
 		}
@@ -179,12 +179,12 @@ func TestQuery_WithSeverityFilter_ReturnsFilteredLogs(t *testing.T) {
 		t.Fatalf("Query failed: %v", err)
 	}
 
-	if len(logs) == 0 {
+	if len(logs.Entries) == 0 {
 		t.Fatal("Expected logs to be returned, got none")
 	}
 
 	// All logs should have error severity
-	for _, log := range logs {
+	for _, log := range logs.Entries {
 		if log.Severity != "error" {
 			t.Errorf("Expected severity=error, got %s", log.Severity)
 		}
@@ -220,12 +220,12 @@ func TestQuery_WithMultipleFilters_ReturnsMatchingLogs(t *testing.T) {
 		t.Fatalf("Query failed: %v", err)
 	}
 
-	if len(logs) == 0 {
+	if len(logs.Entries) == 0 {
 		t.Fatal("Expected logs to be returned, got none")
 	}
 
 	// Verify all filters are applied
-	for _, log := range logs {
+	for _, log := range logs.Entries {
 		// Check search term
 		matched := containsIgnoreCase(log.Message, "cache") || containsIgnoreCase(log.Service, "cache")
 		if !matched {

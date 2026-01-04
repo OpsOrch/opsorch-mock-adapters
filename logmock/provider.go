@@ -113,7 +113,7 @@ func matchesFilters(entry schema.LogEntry, filters []schema.LogFilter) bool {
 }
 
 // Query returns synthetic log entries that echo the query context.
-func (p *Provider) Query(ctx context.Context, query schema.LogQuery) ([]schema.LogEntry, error) {
+func (p *Provider) Query(ctx context.Context, query schema.LogQuery) (schema.LogEntries, error) {
 	_ = ctx
 
 	end := query.End
@@ -258,11 +258,13 @@ func (p *Provider) Query(ctx context.Context, query schema.LogQuery) ([]schema.L
 			Message:   message,
 			Severity:  severity,
 			Service:   service,
-			URL:       generateLogURL(fmt.Sprintf("log-%d-%d", ts.Unix(), i), service, ts),
 			Labels:    labels,
 			Fields:    fields,
 			Metadata:  scopedMetadata(p.cfg.Source, query, start, end, service, region, insight, serviceAlerts),
 		}
+
+		// Add URL to fields since it was removed from schema.LogEntry
+		entry.Fields["url"] = generateLogURL(fmt.Sprintf("log-%d-%d", ts.Unix(), i), service, ts)
 
 		// Apply filters to generated entry
 		if matchesFilters(entry, filters) {
@@ -302,7 +304,10 @@ func (p *Provider) Query(ctx context.Context, query schema.LogQuery) ([]schema.L
 	if len(entries) > limit {
 		entries = entries[:limit]
 	}
-	return entries, nil
+	return schema.LogEntries{
+		Entries: entries,
+		URL:     fmt.Sprintf("https://logs.mock.com/query?service=%s&start=%s&end=%s", inferService(query), query.Start.Format(time.RFC3339), query.End.Format(time.RFC3339)),
+	}, nil
 }
 
 // hashString creates a simple hash from a string for seeding
@@ -1019,7 +1024,6 @@ func (p *Provider) generateLogsForQuery(parsed mockutil.ParsedQuery, query schem
 			Message:   message,
 			Severity:  severity,
 			Service:   service,
-			URL:       generateLogURL(fmt.Sprintf("log-gen-%06d", i+1), service, ts),
 			Labels: map[string]string{
 				"env":     environment,
 				"service": service,
@@ -1033,6 +1037,8 @@ func (p *Provider) generateLogsForQuery(parsed mockutil.ParsedQuery, query schem
 				"searchTerms": parsed.Terms,
 			},
 		}
+		// Add URL to fields
+		entry.Fields["url"] = generateLogURL(fmt.Sprintf("log-gen-%06d", i+1), service, ts)
 
 		entries = append(entries, entry)
 	}
@@ -1145,7 +1151,6 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 			Message:   "POST /api/checkout/order (payments) -> 504 in 9012ms | svc-checkout request failed for user=alice trace=trace-scenario-001",
 			Severity:  "error",
 			Service:   "svc-checkout",
-			URL:       generateLogURL("log-scenario-001", "svc-checkout", now.Add(-25*time.Minute)),
 			Labels: map[string]string{
 				"env":     "prod",
 				"service": "svc-checkout",
@@ -1153,6 +1158,7 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 				"region":  "use1",
 			},
 			Fields: map[string]any{
+				"url":            generateLogURL("log-scenario-001", "svc-checkout", now.Add(-25*time.Minute)),
 				"requestId":      "req-scenario-001",
 				"path":           "/api/checkout/order",
 				"method":         "POST",
@@ -1188,7 +1194,6 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 			Message:   "GET /api/search (query) -> 500 in 2845ms | svc-search request failed for user=sam trace=trace-scenario-002",
 			Severity:  "error",
 			Service:   "svc-search",
-			URL:       generateLogURL("log-scenario-002", "svc-search", now.Add(-20*time.Minute)),
 			Labels: map[string]string{
 				"env":     "prod",
 				"service": "svc-search",
@@ -1196,6 +1201,7 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 				"region":  "use1",
 			},
 			Fields: map[string]any{
+				"url":            generateLogURL("log-scenario-002", "svc-search", now.Add(-20*time.Minute)),
 				"requestId":      "req-scenario-002",
 				"path":           "/api/search",
 				"method":         "GET",
@@ -1232,7 +1238,6 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 			Message:   "POST /api/payments/charge (payments) -> 502 in 5234ms | svc-checkout request failed for user=casey trace=trace-scenario-003",
 			Severity:  "error",
 			Service:   "svc-checkout",
-			URL:       generateLogURL("log-scenario-003", "svc-checkout", now.Add(-15*time.Minute)),
 			Labels: map[string]string{
 				"env":     "prod",
 				"service": "svc-checkout",
@@ -1240,6 +1245,7 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 				"region":  "euw1",
 			},
 			Fields: map[string]any{
+				"url":            generateLogURL("log-scenario-003", "svc-checkout", now.Add(-15*time.Minute)),
 				"requestId":      "req-scenario-003",
 				"path":           "/api/payments/charge",
 				"method":         "POST",
