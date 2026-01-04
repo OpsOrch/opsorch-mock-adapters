@@ -37,6 +37,11 @@ func init() {
 	_ = coreteam.RegisterProvider(ProviderName, New)
 }
 
+// generateTeamURL creates a realistic GitHub-style team URL
+func generateTeamURL(teamID string) string {
+	return fmt.Sprintf("https://github.demo.com/orgs/opsorch/teams/%s", teamID)
+}
+
 // Query filters demo teams by the provided criteria.
 func (p *Provider) Query(ctx context.Context, query schema.TeamQuery) ([]schema.Team, error) {
 	_ = ctx
@@ -543,10 +548,17 @@ func seedTeams(cfg Config) ([]schema.Team, map[string][]schema.TeamMember) {
 }
 
 func cloneTeam(in schema.Team) schema.Team {
+	// Generate URL if not already present
+	url := in.URL
+	if url == "" {
+		url = generateTeamURL(in.ID)
+	}
+
 	return schema.Team{
 		ID:       in.ID,
 		Name:     in.Name,
 		Parent:   in.Parent,
+		URL:      url,
 		Tags:     mockutil.CloneStringMap(in.Tags),
 		Metadata: mockutil.CloneMap(in.Metadata),
 	}

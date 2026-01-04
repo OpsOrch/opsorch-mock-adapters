@@ -43,6 +43,45 @@ func init() {
 	_ = incident.RegisterProvider(ProviderName, New)
 }
 
+// generateIncidentURL creates a realistic PagerDuty-style incident URL
+func generateIncidentURL(incidentID string, isScenario bool) string {
+	if isScenario {
+		return fmt.Sprintf("https://pagerduty.demo.com/incidents/%s?scenario=true", incidentID)
+	}
+	return fmt.Sprintf("https://pagerduty.demo.com/incidents/%s", incidentID)
+}
+
+// isScenarioIncident checks if an incident has scenario metadata
+func isScenarioIncident(metadata map[string]any, fields map[string]any) bool {
+	// Check for scenario markers in metadata
+	if metadata != nil {
+		if isScenario, ok := metadata["is_scenario"].(bool); ok && isScenario {
+			return true
+		}
+		if _, ok := metadata["scenario_id"]; ok {
+			return true
+		}
+		if _, ok := metadata["scenario_name"]; ok {
+			return true
+		}
+	}
+
+	// Check for scenario markers in fields
+	if fields != nil {
+		if isScenario, ok := fields["is_scenario"].(bool); ok && isScenario {
+			return true
+		}
+		if _, ok := fields["scenario_id"]; ok {
+			return true
+		}
+		if _, ok := fields["scenario_name"]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
 // WithScope attaches a QueryScope to the context so Query/List can filter incidents client-side.
 func WithScope(ctx context.Context, scope schema.QueryScope) context.Context {
 	return context.WithValue(ctx, scopeKey{}, scope)
@@ -756,6 +795,13 @@ func inferService(in schema.CreateIncidentInput) string {
 }
 
 func cloneIncident(in schema.Incident) schema.Incident {
+	// Generate URL if not already present
+	url := in.URL
+	if url == "" {
+		isScenario := isScenarioIncident(in.Metadata, in.Fields)
+		url = generateIncidentURL(in.ID, isScenario)
+	}
+
 	return schema.Incident{
 		ID:          in.ID,
 		Title:       in.Title,
@@ -763,6 +809,7 @@ func cloneIncident(in schema.Incident) schema.Incident {
 		Status:      in.Status,
 		Severity:    in.Severity,
 		Service:     in.Service,
+		URL:         url,
 		CreatedAt:   in.CreatedAt,
 		UpdatedAt:   in.UpdatedAt,
 		Fields:      mockutil.CloneMap(in.Fields),

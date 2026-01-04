@@ -961,3 +961,59 @@ func TestQueryScenarioAlertsByScenarioID(t *testing.T) {
 		t.Errorf("expected to find alert with scenario_id 'slo-exhaustion'")
 	}
 }
+func TestAlertURLGeneration(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	// Test Query returns alerts with URLs
+	alerts, err := prov.Query(context.Background(), schema.AlertQuery{Limit: 5})
+	if err != nil {
+		t.Fatalf("failed to query alerts: %v", err)
+	}
+
+	for _, alert := range alerts {
+		if alert.URL == "" {
+			t.Errorf("alert %s has empty URL", alert.ID)
+		}
+		if !strings.HasPrefix(alert.URL, "https://prometheus.demo.com/alerts/") {
+			t.Errorf("alert %s has invalid URL format: %s", alert.ID, alert.URL)
+		}
+
+		// Check scenario alerts have scenario parameter
+		if strings.HasPrefix(alert.ID, "al-scenario-") {
+			if !strings.Contains(alert.URL, "scenario=true") {
+				t.Errorf("scenario alert %s should have scenario parameter: %s", alert.ID, alert.URL)
+			}
+		} else {
+			// Regular alerts should not have scenario parameter
+			if strings.Contains(alert.URL, "scenario=true") {
+				t.Errorf("regular alert %s should not have scenario parameter: %s", alert.ID, alert.URL)
+			}
+		}
+	}
+
+	// Test Get returns alert with URL
+	alert, err := prov.Get(context.Background(), "al-001")
+	if err != nil {
+		t.Fatalf("failed to get alert: %v", err)
+	}
+	if alert.URL == "" {
+		t.Errorf("alert %s from Get has empty URL", alert.ID)
+	}
+	expectedURL := "https://prometheus.demo.com/alerts/al-001"
+	if alert.URL != expectedURL {
+		t.Errorf("alert %s has incorrect URL: got %s, want %s", alert.ID, alert.URL, expectedURL)
+	}
+
+	// Test scenario alert URL
+	scenarioAlert, err := prov.Get(context.Background(), "al-scenario-001")
+	if err != nil {
+		t.Fatalf("failed to get scenario alert: %v", err)
+	}
+	if !strings.Contains(scenarioAlert.URL, "scenario=true") {
+		t.Errorf("scenario alert %s should have scenario parameter: %s", scenarioAlert.ID, scenarioAlert.URL)
+	}
+}

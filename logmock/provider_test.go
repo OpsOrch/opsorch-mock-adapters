@@ -558,3 +558,35 @@ func TestUsesConsistentTeamMapping(t *testing.T) {
 		}
 	}
 }
+func TestLogURLGeneration(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	now := time.Now()
+	logs, err := prov.Query(context.Background(), schema.LogQuery{
+		Start: now.Add(-1 * time.Hour),
+		End:   now,
+		Limit: 5,
+	})
+	if err != nil {
+		t.Fatalf("failed to query logs: %v", err)
+	}
+
+	for _, log := range logs {
+		if log.URL == "" {
+			t.Errorf("log entry has empty URL")
+		}
+		if !strings.HasPrefix(log.URL, "https://kibana.demo.com/app/logs/stream?") {
+			t.Errorf("log entry has invalid URL format: %s", log.URL)
+		}
+		if !strings.Contains(log.URL, "logId=") {
+			t.Errorf("log URL should contain logId parameter: %s", log.URL)
+		}
+		if !strings.Contains(log.URL, "timestamp=") {
+			t.Errorf("log URL should contain timestamp parameter: %s", log.URL)
+		}
+	}
+}

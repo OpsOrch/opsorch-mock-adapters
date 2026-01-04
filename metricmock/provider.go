@@ -112,6 +112,25 @@ func init() {
 	_ = metric.RegisterProvider(ProviderName, New)
 }
 
+// generateMetricURL creates a realistic Grafana-style metric exploration URL
+func generateMetricURL(metricName, service string) string {
+	params := []string{}
+	params = append(params, fmt.Sprintf("query=%s", metricName))
+	if service != "" {
+		params = append(params, fmt.Sprintf("service=%s", service))
+	}
+
+	return fmt.Sprintf("https://grafana.demo.com/explore?%s", strings.Join(params, "&"))
+}
+
+// generateMetricDescriptorURL creates a realistic Prometheus-style metric definition URL
+func generateMetricDescriptorURL(metricName string) string {
+	params := []string{}
+	params = append(params, fmt.Sprintf("g0.expr=%s", metricName))
+
+	return fmt.Sprintf("https://prometheus.demo.com/graph?%s", strings.Join(params, "&"))
+}
+
 // Query returns a single synthetic series derived from the expression and window.
 func (p *Provider) Query(ctx context.Context, query schema.MetricQuery) ([]schema.MetricSeries, error) {
 	_ = ctx
@@ -172,6 +191,7 @@ func (p *Provider) Query(ctx context.Context, query schema.MetricQuery) ([]schem
 			Service:  service,
 			Labels:   labels,
 			Points:   points,
+			URL:      generateMetricURL(def.Name, service),
 			Metadata: metadata,
 		}
 		series = append(series, active)
@@ -180,6 +200,7 @@ func (p *Provider) Query(ctx context.Context, query schema.MetricQuery) ([]schem
 		baseline.Name = def.Name + ".baseline"
 		baseline.Labels = mockutil.CloneMap(active.Labels)
 		baseline.Labels["variant"] = "baseline"
+		baseline.URL = generateMetricURL(def.Name+".baseline", service)
 		baseline.Metadata = mockutil.CloneMap(active.Metadata)
 		baseline.Metadata["variant"] = "baseline"
 		baseline.Points = buildBaselinePoints(active.Points)
@@ -199,6 +220,7 @@ func (p *Provider) Describe(ctx context.Context, scope schema.QueryScope) ([]sch
 			Description: def.Description,
 			Labels:      def.Labels,
 			Unit:        def.Unit,
+			URL:         generateMetricDescriptorURL(def.Name),
 		})
 	}
 	return descriptors, nil

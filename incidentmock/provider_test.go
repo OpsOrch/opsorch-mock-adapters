@@ -382,3 +382,42 @@ func TestQueryScenarioIncidentsByTitle(t *testing.T) {
 		t.Errorf("expected to find incident inc-scenario-001 by title search")
 	}
 }
+func TestIncidentURLGeneration(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	incidents, err := prov.Query(context.Background(), schema.IncidentQuery{Limit: 5})
+	if err != nil {
+		t.Fatalf("failed to query incidents: %v", err)
+	}
+
+	for _, incident := range incidents {
+		if incident.URL == "" {
+			t.Errorf("incident %s has empty URL", incident.ID)
+		}
+		if !strings.HasPrefix(incident.URL, "https://pagerduty.demo.com/incidents/") {
+			t.Errorf("incident %s has invalid URL format: %s", incident.ID, incident.URL)
+		}
+
+		// Check scenario incidents have scenario parameter
+		if strings.Contains(incident.ID, "scenario") {
+			if !strings.Contains(incident.URL, "scenario=true") {
+				t.Errorf("scenario incident %s should have scenario parameter: %s", incident.ID, incident.URL)
+			}
+		}
+	}
+
+	// Test Get method
+	if len(incidents) > 0 {
+		incident, err := prov.Get(context.Background(), incidents[0].ID)
+		if err != nil {
+			t.Fatalf("failed to get incident: %v", err)
+		}
+		if incident.URL == "" {
+			t.Errorf("incident %s from Get has empty URL", incident.ID)
+		}
+	}
+}

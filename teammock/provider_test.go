@@ -2,6 +2,7 @@ package teammock
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/opsorch/opsorch-core/schema"
@@ -269,4 +270,42 @@ func TestTeamMockProviderFiltering(t *testing.T) {
 			})
 		}
 	})
+}
+func TestTeamURLGeneration(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	teams, err := prov.Query(context.Background(), schema.TeamQuery{})
+	if err != nil {
+		t.Fatalf("failed to query teams: %v", err)
+	}
+
+	for _, team := range teams {
+		if team.URL == "" {
+			t.Errorf("team %s has empty URL", team.ID)
+		}
+		if !strings.HasPrefix(team.URL, "https://github.demo.com/orgs/opsorch/teams/") {
+			t.Errorf("team %s has invalid URL format: %s", team.ID, team.URL)
+		}
+		expectedURL := "https://github.demo.com/orgs/opsorch/teams/" + team.ID
+		if team.URL != expectedURL {
+			t.Errorf("team %s has incorrect URL: got %s, want %s", team.ID, team.URL, expectedURL)
+		}
+	}
+
+	// Test Get method
+	team, err := prov.Get(context.Background(), "engineering")
+	if err != nil {
+		t.Fatalf("failed to get team: %v", err)
+	}
+	if team.URL == "" {
+		t.Errorf("team %s from Get has empty URL", team.ID)
+	}
+	expectedURL := "https://github.demo.com/orgs/opsorch/teams/engineering"
+	if team.URL != expectedURL {
+		t.Errorf("team %s has incorrect URL: got %s, want %s", team.ID, team.URL, expectedURL)
+	}
 }

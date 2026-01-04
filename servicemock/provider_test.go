@@ -2,6 +2,7 @@ package servicemock
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/opsorch/opsorch-core/schema"
@@ -87,5 +88,44 @@ func TestQueryRespectsScope(t *testing.T) {
 	}
 	if len(out) != 1 || out[0].ID != "svc-web" {
 		t.Fatalf("expected svc-web for scoped query, got %+v", out)
+	}
+}
+func TestServiceURLGeneration(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	services, err := prov.Query(context.Background(), schema.ServiceQuery{Limit: 5})
+	if err != nil {
+		t.Fatalf("failed to query services: %v", err)
+	}
+
+	for _, service := range services {
+		if service.URL == "" {
+			t.Errorf("service %s has empty URL", service.ID)
+		}
+		if !strings.HasPrefix(service.URL, "https://grafana.demo.com/d/service-") {
+			t.Errorf("service %s has invalid URL format: %s", service.ID, service.URL)
+		}
+		if !strings.Contains(service.URL, "/service-overview") {
+			t.Errorf("service %s URL should contain service-overview: %s", service.ID, service.URL)
+		}
+	}
+
+	// Test specific service URL format
+	if len(services) > 0 {
+		service := services[0]
+		expectedPrefix := "https://grafana.demo.com/d/service-"
+		if !strings.HasPrefix(service.URL, expectedPrefix) {
+			t.Errorf("service URL should start with %s, got %s", expectedPrefix, service.URL)
+		}
+		if service.ID == "svc-checkout" {
+			expectedURL := "https://grafana.demo.com/d/service-checkout/service-overview"
+			if service.URL != expectedURL {
+				t.Errorf("checkout service has incorrect URL: got %s, want %s", service.URL, expectedURL)
+			}
+		}
 	}
 }
