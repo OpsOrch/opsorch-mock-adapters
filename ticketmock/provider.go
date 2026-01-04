@@ -43,6 +43,45 @@ func init() {
 	_ = coreticket.RegisterProvider(ProviderName, New)
 }
 
+// generateTicketURL creates a realistic Jira-style ticket URL
+func generateTicketURL(ticketID string, isScenario bool) string {
+	if isScenario {
+		return fmt.Sprintf("https://jira.demo.com/browse/%s?scenario=true", ticketID)
+	}
+	return fmt.Sprintf("https://jira.demo.com/browse/%s", ticketID)
+}
+
+// isScenarioTicket checks if a ticket has scenario metadata
+func isScenarioTicket(metadata map[string]any, fields map[string]any) bool {
+	// Check for scenario markers in metadata
+	if metadata != nil {
+		if isScenario, ok := metadata["is_scenario"].(bool); ok && isScenario {
+			return true
+		}
+		if _, ok := metadata["scenario_id"]; ok {
+			return true
+		}
+		if _, ok := metadata["scenario_name"]; ok {
+			return true
+		}
+	}
+
+	// Check for scenario markers in fields
+	if fields != nil {
+		if isScenario, ok := fields["is_scenario"].(bool); ok && isScenario {
+			return true
+		}
+		if _, ok := fields["scenario_id"]; ok {
+			return true
+		}
+		if _, ok := fields["scenario_name"]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Query returns tickets that match the provided filters.
 func (p *Provider) Query(ctx context.Context, query schema.TicketQuery) ([]schema.Ticket, error) {
 	_ = ctx
@@ -459,6 +498,13 @@ func ticketServiceKey(service string) string {
 }
 
 func cloneTicket(in schema.Ticket) schema.Ticket {
+	// Generate URL if not already present
+	url := in.URL
+	if url == "" {
+		isScenario := isScenarioTicket(in.Metadata, in.Fields)
+		url = generateTicketURL(in.ID, isScenario)
+	}
+
 	return schema.Ticket{
 		ID:          in.ID,
 		Key:         in.Key,
@@ -467,6 +513,7 @@ func cloneTicket(in schema.Ticket) schema.Ticket {
 		Status:      in.Status,
 		Assignees:   mockutil.CloneStringSlice(in.Assignees),
 		Reporter:    in.Reporter,
+		URL:         url,
 		CreatedAt:   in.CreatedAt,
 		UpdatedAt:   in.UpdatedAt,
 		Fields:      mockutil.CloneMap(in.Fields),

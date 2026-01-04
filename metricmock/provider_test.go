@@ -2,6 +2,7 @@ package metricmock
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -787,6 +788,56 @@ func TestScenarioAnomalyMetadata(t *testing.T) {
 		hasValue := effect["value"] != nil
 		if !hasFactor && !hasValue {
 			t.Errorf("scenario effect missing both anomaly_factor and value")
+		}
+	}
+}
+func TestMetricURLGeneration(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	// Test metric series URLs
+	now := time.Now()
+	series, err := prov.Query(context.Background(), schema.MetricQuery{
+		Start: now.Add(-30 * time.Minute),
+		End:   now,
+		Expression: &schema.MetricExpression{
+			MetricName: "http_requests_total",
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to query metrics: %v", err)
+	}
+
+	for _, s := range series {
+		if s.URL == "" {
+			t.Errorf("metric series %s has empty URL", s.Name)
+		}
+		if !strings.HasPrefix(s.URL, "https://grafana.demo.com/explore?") {
+			t.Errorf("metric series %s has invalid URL format: %s", s.Name, s.URL)
+		}
+		if !strings.Contains(s.URL, "query=") {
+			t.Errorf("metric series URL should contain query parameter: %s", s.URL)
+		}
+	}
+
+	// Test metric descriptor URLs
+	descriptors, err := prov.Describe(context.Background(), schema.QueryScope{})
+	if err != nil {
+		t.Fatalf("failed to describe metrics: %v", err)
+	}
+
+	for _, desc := range descriptors {
+		if desc.URL == "" {
+			t.Errorf("metric descriptor %s has empty URL", desc.Name)
+		}
+		if !strings.HasPrefix(desc.URL, "https://prometheus.demo.com/graph?") {
+			t.Errorf("metric descriptor %s has invalid URL format: %s", desc.Name, desc.URL)
+		}
+		if !strings.Contains(desc.URL, "g0.expr=") {
+			t.Errorf("metric descriptor URL should contain g0.expr parameter: %s", desc.URL)
 		}
 	}
 }

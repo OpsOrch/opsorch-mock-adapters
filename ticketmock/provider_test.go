@@ -2,6 +2,7 @@ package ticketmock
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -348,5 +349,44 @@ func TestQueryScenarioTicketsByService(t *testing.T) {
 
 	if scenarioCount == 0 {
 		t.Errorf("expected scenario tickets for svc-checkout")
+	}
+}
+func TestTicketURLGeneration(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	tickets, err := prov.Query(context.Background(), schema.TicketQuery{Limit: 5})
+	if err != nil {
+		t.Fatalf("failed to query tickets: %v", err)
+	}
+
+	for _, ticket := range tickets {
+		if ticket.URL == "" {
+			t.Errorf("ticket %s has empty URL", ticket.ID)
+		}
+		if !strings.HasPrefix(ticket.URL, "https://jira.demo.com/browse/") {
+			t.Errorf("ticket %s has invalid URL format: %s", ticket.ID, ticket.URL)
+		}
+
+		// Check scenario tickets have scenario parameter
+		if strings.Contains(ticket.ID, "scenario") {
+			if !strings.Contains(ticket.URL, "scenario=true") {
+				t.Errorf("scenario ticket %s should have scenario parameter: %s", ticket.ID, ticket.URL)
+			}
+		}
+	}
+
+	// Test Get method
+	if len(tickets) > 0 {
+		ticket, err := prov.Get(context.Background(), tickets[0].ID)
+		if err != nil {
+			t.Fatalf("failed to get ticket: %v", err)
+		}
+		if ticket.URL == "" {
+			t.Errorf("ticket %s from Get has empty URL", ticket.ID)
+		}
 	}
 }

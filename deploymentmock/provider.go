@@ -423,7 +423,7 @@ func getDeploymentWindow(environment string) string {
 }
 
 func cloneDeployment(in schema.Deployment) schema.Deployment {
-	return schema.Deployment{
+	cloned := schema.Deployment{
 		ID:          in.ID,
 		Service:     in.Service,
 		Environment: in.Environment,
@@ -431,11 +431,28 @@ func cloneDeployment(in schema.Deployment) schema.Deployment {
 		Status:      in.Status,
 		StartedAt:   in.StartedAt,
 		FinishedAt:  in.FinishedAt,
-		URL:         in.URL,
+		URL:         generateDeploymentURL(in),
 		Actor:       mockutil.CloneMap(in.Actor),
 		Fields:      mockutil.CloneMap(in.Fields),
 		Metadata:    mockutil.CloneMap(in.Metadata),
 	}
+	return cloned
+}
+
+// generateDeploymentURL creates a GitHub Actions-style URL for the deployment
+func generateDeploymentURL(dep schema.Deployment) string {
+	serviceName := strings.TrimPrefix(dep.Service, "svc-")
+
+	// Extract run ID from existing URL if present, otherwise generate one
+	runID := "12345"
+	if dep.URL != "" && strings.Contains(dep.URL, "/actions/runs/") {
+		parts := strings.Split(dep.URL, "/actions/runs/")
+		if len(parts) > 1 {
+			runID = parts[1]
+		}
+	}
+
+	return fmt.Sprintf("https://github.com/company/%s/actions/runs/%s", serviceName, runID)
 }
 
 func sortedDeploymentIDs(deployments map[string]schema.Deployment) []string {

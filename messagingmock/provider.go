@@ -38,6 +38,14 @@ func init() {
 	_ = messaging.RegisterProvider(ProviderName, New)
 }
 
+// generateMessagingURL creates a realistic Slack-style message URL
+func generateMessagingURL(messageID, channel string) string {
+	// Clean channel name (remove # if present)
+	cleanChannel := strings.TrimPrefix(channel, "#")
+
+	return fmt.Sprintf("https://slack.demo.com/archives/%s/p%s", cleanChannel, messageID)
+}
+
 // Send records the message send and returns a synthetic provider response.
 func (p *Provider) Send(ctx context.Context, msg schema.Message) (schema.MessageResult, error) {
 	p.mu.Lock()
@@ -91,6 +99,7 @@ func (p *Provider) Send(ctx context.Context, msg schema.Message) (schema.Message
 		ID:       id,
 		Channel:  msg.Channel,
 		SentAt:   now,
+		URL:      generateMessagingURL(id, msg.Channel),
 		Metadata: metadata,
 	}
 

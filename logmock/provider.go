@@ -45,6 +45,18 @@ func init() {
 	_ = log.RegisterProvider(ProviderName, New)
 }
 
+// generateLogURL creates a realistic Kibana-style log URL
+func generateLogURL(logID, service string, timestamp time.Time) string {
+	params := []string{}
+	params = append(params, fmt.Sprintf("logId=%s", logID))
+	if service != "" {
+		params = append(params, fmt.Sprintf("service=%s", service))
+	}
+	params = append(params, fmt.Sprintf("timestamp=%s", timestamp.Format(time.RFC3339)))
+
+	return fmt.Sprintf("https://kibana.demo.com/app/logs/stream?%s", strings.Join(params, "&"))
+}
+
 // matchesFilters checks if a log entry matches all the provided filters
 func matchesFilters(entry schema.LogEntry, filters []schema.LogFilter) bool {
 	if len(filters) == 0 {
@@ -246,6 +258,7 @@ func (p *Provider) Query(ctx context.Context, query schema.LogQuery) ([]schema.L
 			Message:   message,
 			Severity:  severity,
 			Service:   service,
+			URL:       generateLogURL(fmt.Sprintf("log-%d-%d", ts.Unix(), i), service, ts),
 			Labels:    labels,
 			Fields:    fields,
 			Metadata:  scopedMetadata(p.cfg.Source, query, start, end, service, region, insight, serviceAlerts),
@@ -1006,6 +1019,7 @@ func (p *Provider) generateLogsForQuery(parsed mockutil.ParsedQuery, query schem
 			Message:   message,
 			Severity:  severity,
 			Service:   service,
+			URL:       generateLogURL(fmt.Sprintf("log-gen-%06d", i+1), service, ts),
 			Labels: map[string]string{
 				"env":     environment,
 				"service": service,
@@ -1131,6 +1145,7 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 			Message:   "POST /api/checkout/order (payments) -> 504 in 9012ms | svc-checkout request failed for user=alice trace=trace-scenario-001",
 			Severity:  "error",
 			Service:   "svc-checkout",
+			URL:       generateLogURL("log-scenario-001", "svc-checkout", now.Add(-25*time.Minute)),
 			Labels: map[string]string{
 				"env":     "prod",
 				"service": "svc-checkout",
@@ -1173,6 +1188,7 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 			Message:   "GET /api/search (query) -> 500 in 2845ms | svc-search request failed for user=sam trace=trace-scenario-002",
 			Severity:  "error",
 			Service:   "svc-search",
+			URL:       generateLogURL("log-scenario-002", "svc-search", now.Add(-20*time.Minute)),
 			Labels: map[string]string{
 				"env":     "prod",
 				"service": "svc-search",
@@ -1216,6 +1232,7 @@ func getScenarioLogs(now time.Time) []schema.LogEntry {
 			Message:   "POST /api/payments/charge (payments) -> 502 in 5234ms | svc-checkout request failed for user=casey trace=trace-scenario-003",
 			Severity:  "error",
 			Service:   "svc-checkout",
+			URL:       generateLogURL("log-scenario-003", "svc-checkout", now.Add(-15*time.Minute)),
 			Labels: map[string]string{
 				"env":     "prod",
 				"service": "svc-checkout",

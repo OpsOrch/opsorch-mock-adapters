@@ -36,6 +36,13 @@ func init() {
 	_ = coreservice.RegisterProvider(ProviderName, New)
 }
 
+// generateServiceURL creates a realistic Grafana-style service dashboard URL
+func generateServiceURL(serviceID string) string {
+	// Remove svc- prefix for cleaner dashboard names
+	dashName := strings.TrimPrefix(serviceID, "svc-")
+	return fmt.Sprintf("https://grafana.demo.com/d/service-%s/service-overview", dashName)
+}
+
 // Query filters demo services by the provided criteria.
 func (p *Provider) Query(ctx context.Context, query schema.ServiceQuery) ([]schema.Service, error) {
 	_ = ctx
@@ -287,9 +294,16 @@ func serviceSlug(id string) string {
 }
 
 func cloneService(in schema.Service) schema.Service {
+	// Generate URL if not already present
+	url := in.URL
+	if url == "" {
+		url = generateServiceURL(in.ID)
+	}
+
 	return schema.Service{
 		ID:       in.ID,
 		Name:     in.Name,
+		URL:      url,
 		Tags:     mockutil.CloneStringMap(in.Tags),
 		Metadata: mockutil.CloneMap(in.Metadata),
 	}

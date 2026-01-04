@@ -44,6 +44,48 @@ func init() {
 	_ = alert.RegisterProvider(ProviderName, New)
 }
 
+// generateAlertURL creates a realistic Prometheus-style alert URL
+func generateAlertURL(alertID, service string, isScenario bool) string {
+	if isScenario {
+		return fmt.Sprintf("https://prometheus.demo.com/alerts/%s?scenario=true", alertID)
+	}
+	return fmt.Sprintf("https://prometheus.demo.com/alerts/%s", alertID)
+}
+
+// isScenarioAlert checks if an alert has scenario metadata
+func isScenarioAlert(metadata map[string]any, fields map[string]any) bool {
+	// Check for scenario markers in metadata
+	if metadata != nil {
+		if isScenario, ok := metadata["is_scenario"].(bool); ok && isScenario {
+			return true
+		}
+		if _, ok := metadata["scenario_id"]; ok {
+			return true
+		}
+		if _, ok := metadata["scenario_name"]; ok {
+			return true
+		}
+		if _, ok := metadata["scenario_effects"]; ok {
+			return true
+		}
+	}
+
+	// Check for scenario markers in fields
+	if fields != nil {
+		if isScenario, ok := fields["is_scenario"].(bool); ok && isScenario {
+			return true
+		}
+		if _, ok := fields["scenario_id"]; ok {
+			return true
+		}
+		if _, ok := fields["scenario_name"]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
 // WithScope attaches a QueryScope so Query can merge it with inline filters.
 func WithScope(ctx context.Context, scope schema.QueryScope) context.Context {
 	return context.WithValue(ctx, scopeKey{}, scope)
@@ -1261,6 +1303,13 @@ func parseConfig(cfg map[string]any) Config {
 }
 
 func cloneAlert(in schema.Alert) schema.Alert {
+	// Generate URL if not already present
+	url := in.URL
+	if url == "" {
+		isScenario := isScenarioAlert(in.Metadata, in.Fields)
+		url = generateAlertURL(in.ID, in.Service, isScenario)
+	}
+
 	return schema.Alert{
 		ID:          in.ID,
 		Title:       in.Title,
@@ -1268,6 +1317,7 @@ func cloneAlert(in schema.Alert) schema.Alert {
 		Status:      in.Status,
 		Severity:    in.Severity,
 		Service:     in.Service,
+		URL:         url,
 		CreatedAt:   in.CreatedAt,
 		UpdatedAt:   in.UpdatedAt,
 		Fields:      mockutil.CloneMap(in.Fields),
@@ -1416,6 +1466,7 @@ func (p *Provider) generateAlertsForQuery(parsed mockutil.ParsedQuery, scope sch
 			Status:      status,
 			Severity:    severity,
 			Service:     service,
+			URL:         generateAlertURL(fmt.Sprintf("al-gen-%d", now.Unix()+int64(i)), service, false),
 			CreatedAt:   now.Add(-time.Duration(30-i*5) * time.Minute),
 			UpdatedAt:   now.Add(-time.Duration(5-i) * time.Minute),
 			Fields: map[string]any{

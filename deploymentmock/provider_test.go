@@ -2,6 +2,7 @@ package deploymentmock
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/opsorch/opsorch-core/schema"
@@ -228,6 +229,48 @@ func TestProvider_ScenarioDeployments(t *testing.T) {
 		}
 		if scenarioStage, ok := dep.Metadata["scenario_stage"].(string); !ok || scenarioStage == "" {
 			t.Errorf("Expected scenario_stage in deployment %s", dep.ID)
+		}
+	}
+}
+func TestDeploymentURLGeneration(t *testing.T) {
+	provAny, err := New(map[string]any{})
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+	prov := provAny.(*Provider)
+
+	deployments, err := prov.Query(context.Background(), schema.DeploymentQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("failed to query deployments: %v", err)
+	}
+
+	for _, deployment := range deployments {
+		if deployment.URL == "" {
+			t.Errorf("deployment %s has empty URL", deployment.ID)
+		}
+		if !strings.HasPrefix(deployment.URL, "https://github.com/company/") {
+			t.Errorf("deployment %s has invalid URL format: %s", deployment.ID, deployment.URL)
+		}
+		if !strings.Contains(deployment.URL, "/actions/runs/") {
+			t.Errorf("deployment URL should contain GitHub Actions path: %s", deployment.URL)
+		}
+
+		// Check scenario deployments have scenario identifiers
+		if strings.Contains(deployment.ID, "scenario") {
+			if !strings.Contains(deployment.URL, "scenario") {
+				t.Errorf("scenario deployment %s should have scenario in URL: %s", deployment.ID, deployment.URL)
+			}
+		}
+	}
+
+	// Test Get method
+	if len(deployments) > 0 {
+		deployment, err := prov.Get(context.Background(), deployments[0].ID)
+		if err != nil {
+			t.Fatalf("failed to get deployment: %v", err)
+		}
+		if deployment.URL == "" {
+			t.Errorf("deployment %s from Get has empty URL", deployment.ID)
 		}
 	}
 }
