@@ -22,25 +22,28 @@ func TestQueryGeneratesEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query returned error: %v", err)
 	}
-	if len(entries) != 4 {
-		t.Fatalf("expected entries to respect limit, got %d", len(entries))
+	if len(entries.Entries) != 4 {
+		t.Fatalf("expected entries to respect limit, got %d", len(entries.Entries))
 	}
-	for _, e := range entries {
+	if entries.URL == "" {
+		t.Fatalf("Expected URL to be set")
+	}
+	for _, e := range entries.Entries {
 		if e.Timestamp.Before(start) || e.Timestamp.After(end) {
 			t.Fatalf("timestamp outside range: %v", e.Timestamp)
 		}
 	}
-	if entries[0].Severity != "error" {
-		t.Fatalf("expected severity inference, got %s", entries[0].Severity)
+	if entries.Entries[0].Severity != "error" {
+		t.Fatalf("expected severity inference, got %s", entries.Entries[0].Severity)
 	}
-	if entries[0].Service != "checkout" {
-		t.Fatalf("expected service field to be set, got %s", entries[0].Service)
+	if entries.Entries[0].Service != "checkout" {
+		t.Fatalf("expected service field to be set, got %s", entries.Entries[0].Service)
 	}
-	if entries[0].Labels["service"] != "checkout" {
-		t.Fatalf("expected service detection in labels, got %v", entries[0].Labels["service"])
+	if entries.Entries[0].Labels["service"] != "checkout" {
+		t.Fatalf("expected service detection in labels, got %v", entries.Entries[0].Labels["service"])
 	}
-	if entries[0].Metadata["source"] != "demo" {
-		t.Fatalf("expected metadata source, got %v", entries[0].Metadata["source"])
+	if entries.Entries[0].Metadata["source"] != "demo" {
+		t.Fatalf("expected metadata source, got %v", entries.Entries[0].Metadata["source"])
 	}
 }
 
@@ -55,7 +58,7 @@ func TestDefaultValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query returned error: %v", err)
 	}
-	if len(entries) == 0 {
+	if len(entries.Entries) == 0 {
 		t.Fatalf("expected default entries")
 	}
 }
@@ -72,23 +75,23 @@ func TestQueryRespectsScope(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query returned error: %v", err)
 	}
-	if len(entries) == 0 {
+	if len(entries.Entries) == 0 {
 		t.Fatalf("expected entries for scoped query")
 	}
-	if entries[0].Service != scope.Service {
-		t.Fatalf("expected service field %s, got %s", scope.Service, entries[0].Service)
+	if entries.Entries[0].Service != scope.Service {
+		t.Fatalf("expected service field %s, got %s", scope.Service, entries.Entries[0].Service)
 	}
-	if got := entries[0].Labels["service"]; got != scope.Service {
+	if got := entries.Entries[0].Labels["service"]; got != scope.Service {
 		t.Fatalf("expected service label %s, got %v", scope.Service, got)
 	}
-	if got := entries[0].Labels["env"]; got != scope.Environment {
+	if got := entries.Entries[0].Labels["env"]; got != scope.Environment {
 		t.Fatalf("expected env label %s, got %v", scope.Environment, got)
 	}
-	if got := entries[0].Labels["team"]; got != scope.Team {
+	if got := entries.Entries[0].Labels["team"]; got != scope.Team {
 		t.Fatalf("expected team label %s, got %v", scope.Team, got)
 	}
-	if scopeMeta, ok := entries[0].Metadata["scope"].(schema.QueryScope); !ok || scopeMeta != scope {
-		t.Fatalf("expected scope metadata %+v, got %+v", scope, entries[0].Metadata["scope"])
+	if scopeMeta, ok := entries.Entries[0].Metadata["scope"].(schema.QueryScope); !ok || scopeMeta != scope {
+		t.Fatalf("expected scope metadata %+v, got %+v", scope, entries.Entries[0].Metadata["scope"])
 	}
 }
 
@@ -110,11 +113,11 @@ func TestLogsIncludeAlertContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query returned error: %v", err)
 	}
-	if len(entries) == 0 {
+	if len(entries.Entries) == 0 {
 		t.Fatalf("expected entries for checkout scope")
 	}
 	found := false
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if _, ok := entry.Fields["alerts"]; ok {
 			found = true
 			break
@@ -145,7 +148,7 @@ func TestScenarioLogsStaticSeeding(t *testing.T) {
 
 	// Verify scenario logs are present
 	scenarioCount := 0
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if isScenario, ok := entry.Fields["is_scenario"].(bool); ok && isScenario {
 			scenarioCount++
 			// Verify scenario metadata
@@ -193,7 +196,7 @@ func TestScenarioLogVariety(t *testing.T) {
 
 	// Collect scenario logs
 	scenarioLogs := []schema.LogEntry{}
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if isScenario, ok := entry.Fields["is_scenario"].(bool); ok && isScenario {
 			scenarioLogs = append(scenarioLogs, entry)
 		}
@@ -247,7 +250,7 @@ func TestScenarioErrorLogsHaveStackTraces(t *testing.T) {
 	errorCount := 0
 	stackTraceCount := 0
 	errorCodeCount := 0
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if isScenario, ok := entry.Fields["is_scenario"].(bool); ok && isScenario {
 			if entry.Severity == "error" {
 				errorCount++
@@ -293,7 +296,7 @@ func TestQueryScenarioLogsByService(t *testing.T) {
 
 	// Verify all logs are for svc-checkout
 	scenarioCount := 0
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if entry.Service != "svc-checkout" {
 			t.Errorf("expected service svc-checkout, got %s", entry.Service)
 		}
@@ -332,12 +335,12 @@ func TestQueryRespectsFilters(t *testing.T) {
 		t.Fatalf("Query returned error: %v", err)
 	}
 
-	if len(entries) == 0 {
+	if len(entries.Entries) == 0 {
 		t.Fatalf("expected entries with service filter")
 	}
 
 	// Verify all entries match the filter
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if entry.Service != "svc-cache" {
 			t.Errorf("expected service=svc-cache, got %s", entry.Service)
 		}
@@ -358,7 +361,7 @@ func TestQueryRespectsFilters(t *testing.T) {
 		t.Fatalf("Query returned error: %v", err)
 	}
 
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if entry.Severity != "error" {
 			t.Errorf("expected severity=error, got %s", entry.Severity)
 		}
@@ -380,7 +383,7 @@ func TestQueryRespectsFilters(t *testing.T) {
 		t.Fatalf("Query returned error: %v", err)
 	}
 
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if entry.Service != "svc-checkout" {
 			t.Errorf("expected service=svc-checkout, got %s", entry.Service)
 		}
@@ -410,12 +413,12 @@ func TestCacheServiceSpecificLogs(t *testing.T) {
 		t.Fatalf("Query returned error: %v", err)
 	}
 
-	if len(entries) == 0 {
+	if len(entries.Entries) == 0 {
 		t.Fatalf("expected entries for svc-cache")
 	}
 
 	// Verify cache-specific paths and components
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if entry.Service != "svc-cache" {
 			t.Errorf("expected service=svc-cache, got %s", entry.Service)
 		}
@@ -473,12 +476,12 @@ func TestSearchInfluencesLogContent(t *testing.T) {
 		t.Fatalf("Query returned error: %v", err)
 	}
 
-	if len(entries) == 0 {
+	if len(entries.Entries) == 0 {
 		t.Fatalf("expected entries for recommendation search")
 	}
 
 	// Verify service is correct
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if entry.Service != "svc-recommendation" {
 			t.Errorf("expected service=svc-recommendation, got %s", entry.Service)
 		}
@@ -486,7 +489,7 @@ func TestSearchInfluencesLogContent(t *testing.T) {
 
 	// Verify messages contain relevant context
 	foundRelevant := false
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		msg := strings.ToLower(entry.Message)
 		if strings.Contains(msg, "quality") || strings.Contains(msg, "rollout") ||
 			strings.Contains(msg, "recommendation") || strings.Contains(msg, "degrad") {
@@ -513,15 +516,15 @@ func TestSearchInfluencesLogContent(t *testing.T) {
 	}
 
 	errorCount := 0
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if entry.Severity == "error" {
 			errorCount++
 		}
 	}
 
 	// Should have more errors than other severities due to search bias
-	if errorCount < len(entries)/2 {
-		t.Errorf("expected error bias in results, got %d errors out of %d entries", errorCount, len(entries))
+	if errorCount < len(entries.Entries)/2 {
+		t.Errorf("expected error bias in results, got %d errors out of %d entries", errorCount, len(entries.Entries))
 	}
 }
 
@@ -546,11 +549,11 @@ func TestUsesConsistentTeamMapping(t *testing.T) {
 		t.Fatalf("Query returned error: %v", err)
 	}
 
-	if len(entries) == 0 {
+	if len(entries.Entries) == 0 {
 		t.Fatalf("expected entries for svc-recommendation")
 	}
 
-	for _, entry := range entries {
+	for _, entry := range entries.Entries {
 		if team, ok := entry.Labels["team"]; ok {
 			if team != "team-orion" {
 				t.Errorf("expected team=team-orion for svc-recommendation, got %s", team)
@@ -575,18 +578,20 @@ func TestLogURLGeneration(t *testing.T) {
 		t.Fatalf("failed to query logs: %v", err)
 	}
 
-	for _, log := range logs {
-		if log.URL == "" {
-			t.Errorf("log entry has empty URL")
+	for _, log := range logs.Entries {
+		url, ok := log.Fields["url"].(string)
+		if !ok || url == "" {
+			t.Errorf("log entry has empty or invalid URL field")
+			continue
 		}
-		if !strings.HasPrefix(log.URL, "https://kibana.demo.com/app/logs/stream?") {
-			t.Errorf("log entry has invalid URL format: %s", log.URL)
+		if !strings.HasPrefix(url, "https://kibana.demo.com/app/logs/stream?") {
+			t.Errorf("log entry has invalid URL format: %s", url)
 		}
-		if !strings.Contains(log.URL, "logId=") {
-			t.Errorf("log URL should contain logId parameter: %s", log.URL)
+		if !strings.Contains(url, "logId=") {
+			t.Errorf("log URL should contain logId parameter: %s", url)
 		}
-		if !strings.Contains(log.URL, "timestamp=") {
-			t.Errorf("log URL should contain timestamp parameter: %s", log.URL)
+		if !strings.Contains(url, "timestamp=") {
+			t.Errorf("log URL should contain timestamp parameter: %s", url)
 		}
 	}
 }
