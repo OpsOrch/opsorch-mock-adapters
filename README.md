@@ -20,6 +20,7 @@ This repository provides mock implementations for all OpsOrch capabilities:
 8. **Secret Provider**: Simple key/value secret store
 9. **Deployment Provider**: In-memory deployment history with scenario data
 10. **Team Provider**: Static team hierarchy with realistic organizational structure
+11. **Orchestration Provider**: In-memory orchestration plans and runs with playbooks, runbooks, and release checklists
 
 ## Features
 
@@ -153,6 +154,22 @@ Mock adapters have minimal configuration requirements since they don't connect t
 |-------|------|----------|-------------|---------|
 | `organization` | string | No | Organization name used in team metadata | `demo-org` |
 
+### Orchestration Provider (`orchestrationmock`)
+
+- Seeds playbooks for incident response (Database Connection Pool Exhaustion, High Latency Investigation, Service Degradation Response)
+- Seeds runbooks for operational procedures (Database Failover, Certificate Rotation, Cache Flush and Warmup)
+- Seeds release checklists for deployment workflows (Production Release, Canary Deployment, Rollback)
+- Supports QueryPlans, GetPlan, QueryRuns, GetRun, StartRun, CompleteStep
+- Filters by query string, tags, scope, status, and plan ID
+- Manages step dependencies and transitions steps to ready when dependencies complete
+- Includes scenario-flagged runs for demonstrating active orchestration
+
+#### Configuration
+
+| Field | Type | Required | Description | Default |
+|-------|------|----------|-------------|---------|
+| `source` | string | No | Source identifier stamped in `Metadata["source"]` | `mock` |
+
 ## Usage
 
 ### Embed Directly Inside OpsOrch Core
@@ -171,6 +188,7 @@ import (
     _ "github.com/opsorch/opsorch-mock-adapters/secretmock"
     _ "github.com/opsorch/opsorch-mock-adapters/deploymentmock"
     _ "github.com/opsorch/opsorch-mock-adapters/teammock"
+    _ "github.com/opsorch/opsorch-mock-adapters/orchestrationmock"
 )
 ```
 
@@ -187,6 +205,7 @@ OPSORCH_SERVICE_PROVIDER=mock \
 OPSORCH_SECRET_PROVIDER=mock \
 OPSORCH_DEPLOYMENT_PROVIDER=mock \
 OPSORCH_TEAM_PROVIDER=mock \
+OPSORCH_ORCHESTRATION_PROVIDER=mock \
 go run ./cmd/opsorch
 ```
 
@@ -348,6 +367,7 @@ Each plugin supports the standard methods for its capability:
 - **Secret Plugin**: `secret.get`, `secret.put`
 - **Deployment Plugin**: `deployment.query`, `deployment.get`
 - **Team Plugin**: `team.query`, `team.get`, `team.members`
+- **Orchestration Plugin**: `orchestration.query`, `orchestration.get`, `orchestration.run.query`, `orchestration.run.get`, `orchestration.run.start`, `orchestration.run.step.complete`
 
 ## Use Cases
 

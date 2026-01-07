@@ -1179,6 +1179,54 @@ func (p *Provider) seed() {
 		}
 	}
 
+	// Add analytics alert
+	analyticsAlertID := "alert-analytics-001"
+	p.alerts[analyticsAlertID] = schema.Alert{
+		ID:          analyticsAlertID,
+		Title:       "Analytics Correlation Lag",
+		Description: "Correlation lag exceeds 30 minutes in svc-analytics.",
+		Status:      "firing",
+		Severity:    "sev2",
+		Service:     "svc-analytics",
+		CreatedAt:   now.Add(-20 * time.Minute),
+		UpdatedAt:   now.Add(-20 * time.Minute),
+		URL:         generateAlertURL(analyticsAlertID, "svc-analytics", false),
+		Fields: map[string]any{
+			"service":     "svc-analytics",
+			"team":        "data-platform",
+			"environment": "prod",
+			"alert_name":  "correlation_lag_high",
+		},
+		Metadata: map[string]any{
+			"source": p.cfg.Source,
+		},
+	}
+	p.lifecycle["alert-analytics-001"] = &alertLifecycle{steps: lifecycleScenarios["al-013"]}
+
+	// Add payment latency alert
+	paymentAlertID := "alert-payment-001"
+	p.alerts[paymentAlertID] = schema.Alert{
+		ID:          paymentAlertID,
+		Title:       "Payment Service Latency",
+		Description: "P99 latency for svc-payments exceeds 500ms.",
+		Status:      "firing",
+		Severity:    "sev1",
+		Service:     "svc-payments",
+		CreatedAt:   now.Add(-10 * time.Minute),
+		UpdatedAt:   now.Add(-10 * time.Minute),
+		URL:         generateAlertURL(paymentAlertID, "svc-payments", false),
+		Fields: map[string]any{
+			"service":     "svc-payments",
+			"team":        "payments",
+			"environment": "prod",
+			"alert_name":  "payment_latency_high",
+		},
+		Metadata: map[string]any{
+			"source": p.cfg.Source,
+		},
+	}
+	p.lifecycle[paymentAlertID] = &alertLifecycle{steps: lifecycleScenarios["al-001"]}
+
 	p.publishLocked()
 }
 
@@ -1278,6 +1326,10 @@ var lifecycleScenarios = map[string][]lifecycleStep{
 	},
 	"al-012": {
 		{After: 30 * time.Minute, Status: "acknowledged"},
+	},
+	"al-013": {
+		{After: 15 * time.Minute, Status: "acknowledged"},
+		{After: 45 * time.Minute, Status: "resolved"},
 	},
 }
 

@@ -54,5 +54,6 @@ ENV \
   OPSORCH_SECRET_PLUGIN=/opt/opsorch/plugins/secretplugin \
   OPSORCH_DEPLOYMENT_PLUGIN=/opt/opsorch/plugins/deploymentplugin \
   OPSORCH_TEAM_PLUGIN=/opt/opsorch/plugins/teamplugin \
+  OPSORCH_ORCHESTRATION_PLUGIN=/opt/opsorch/plugins/orchestrationplugin \
   OPSORCH_BEARER_TOKEN=demo
  
