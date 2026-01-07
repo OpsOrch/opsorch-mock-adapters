@@ -762,6 +762,72 @@ func (p *Provider) seed() {
 		{ID: "inc-scenario-006-t3", IncidentID: "inc-scenario-006", At: now.Add(-4 * time.Minute), Kind: "note", Body: "Identified recommendation model inference timeout", Actor: map[string]any{"type": "user", "name": "milo"}},
 		{ID: "inc-scenario-006-t4", IncidentID: "inc-scenario-006", At: now.Add(-2 * time.Minute), Kind: "note", Body: "Restarting recommendation service pods", Actor: map[string]any{"type": "user", "name": "milo"}},
 	}
+
+	// Add analytics incident
+	analyticsInc := schema.Incident{
+		ID:          "inc-analytics-001",
+		Title:       "Analytics Correlation Failure",
+		Description: "Correlation services are failing to process events, leading to data gaps.",
+		Status:      "triggered",
+		Severity:    "sev2",
+		Service:     "svc-analytics",
+		URL:         generateIncidentURL("inc-analytics-001", false),
+		CreatedAt:   now.Add(-20 * time.Minute),
+		UpdatedAt:   now.Add(-20 * time.Minute),
+		Fields: map[string]any{
+			"service":     "svc-analytics",
+			"environment": "prod",
+			"team":        "data-platform",
+			"region":      "us-east-1",
+		},
+		Metadata: map[string]any{
+			"source": p.cfg.Source,
+		},
+	}
+	p.incidents[analyticsInc.ID] = analyticsInc
+	p.timeline[analyticsInc.ID] = []schema.TimelineEntry{
+		{
+			ID:         fmt.Sprintf("tle-gen-%d", now.Unix()),
+			IncidentID: analyticsInc.ID,
+			Kind:       "trigger",
+			Body:       "Incident triggered by alert 'Analytics Correlation Lag'",
+			At:         now.Add(-20 * time.Minute),
+			Actor:      map[string]any{"name": "alertmanager", "type": "system"},
+		},
+	}
+
+	// Add payment incident
+	paymentInc := schema.Incident{
+		ID:          "inc-payment-001",
+		Title:       "Payment Latency Spikes",
+		Description: "Payment service is experiencing intermittent latency spikes, impacting checkout success rate.",
+		Status:      "triggered",
+		Severity:    "sev1",
+		Service:     "svc-payments",
+		URL:         generateIncidentURL("inc-payment-001", false),
+		CreatedAt:   now.Add(-10 * time.Minute),
+		UpdatedAt:   now.Add(-10 * time.Minute),
+		Fields: map[string]any{
+			"service":     "svc-payments",
+			"environment": "prod",
+			"team":        "payments",
+			"region":      "us-east-1",
+		},
+		Metadata: map[string]any{
+			"source": p.cfg.Source,
+		},
+	}
+	p.incidents[paymentInc.ID] = paymentInc
+	p.timeline[paymentInc.ID] = []schema.TimelineEntry{
+		{
+			ID:         fmt.Sprintf("tle-gen-payment-%d", now.Unix()),
+			IncidentID: paymentInc.ID,
+			Kind:       "trigger",
+			Body:       "Incident triggered by alert 'Payment Service Latency'",
+			At:         now.Add(-10 * time.Minute),
+			Actor:      map[string]any{"name": "alertmanager", "type": "system"},
+		},
+	}
 }
 
 func parseConfig(cfg map[string]any) Config {
